@@ -44,7 +44,12 @@ export function TextInput({
     <div style={{ marginBottom: 16 }}>
       <label
         htmlFor={id}
-        style={{ display: "block", fontSize: 14, fontWeight: 600, marginBottom: 6 }}
+        style={{
+          display: "block",
+          fontSize: 14,
+          fontWeight: 600,
+          marginBottom: 6,
+        }}
       >
         {label}
       </label>

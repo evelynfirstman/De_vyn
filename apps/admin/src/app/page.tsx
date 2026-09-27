@@ -47,23 +47,38 @@ export default function DesignSystemPage() {
     <main style={{ maxWidth: 960, margin: "0 auto", padding: "40px 24px" }}>
       <header
         style={{
-          background: "linear-gradient(135deg, var(--brand-900), var(--brand-500))",
+          background:
+            "linear-gradient(135deg, var(--brand-900), var(--brand-500))",
           color: "#fff",
           borderRadius: "var(--radius-lg)",
           padding: "40px 32px",
           marginBottom: 32,
         }}
       >
-        <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: -0.5, margin: 0 }}>
+        <h1
+          style={{
+            fontSize: 32,
+            fontWeight: 800,
+            letterSpacing: -0.5,
+            margin: 0,
+          }}
+        >
           Vyn Therapy — Design System
         </h1>
         <p style={{ opacity: 0.85, marginTop: 8, fontSize: 16 }}>
-          Phase 1 · tokens from <code style={{ background: "rgba(255,255,255,.2)" }}>@vyn/tokens</code>,
-          components from <code style={{ background: "rgba(255,255,255,.2)" }}>@vyn/ui</code>
+          Phase 1 · tokens from{" "}
+          <code style={{ background: "rgba(255,255,255,.2)" }}>
+            @vyn/tokens
+          </code>
+          , components from{" "}
+          <code style={{ background: "rgba(255,255,255,.2)" }}>@vyn/ui</code>
         </p>
       </header>
 
-      <SectionCard title="1 · Colors" sub="Rendered from the tokens.ts single source of truth.">
+      <SectionCard
+        title="1 · Colors"
+        sub="Rendered from the tokens.ts single source of truth."
+      >
         <div
           style={{
             display: "grid",
@@ -74,12 +89,18 @@ export default function DesignSystemPage() {
           {swatches.map((s) => (
             <div
               key={s.name}
-              style={{ borderRadius: 12, overflow: "hidden", border: "1px solid var(--ink-100)" }}
+              style={{
+                borderRadius: 12,
+                overflow: "hidden",
+                border: "1px solid var(--ink-100)",
+              }}
             >
               <div style={{ height: 64, background: s.value }} />
               <div style={{ padding: "8px 10px", fontSize: 12 }}>
                 <b style={{ display: "block", fontSize: 13 }}>{s.name}</b>
-                <span style={{ color: "var(--ink-500)", fontFamily: "monospace" }}>
+                <span
+                  style={{ color: "var(--ink-500)", fontFamily: "monospace" }}
+                >
                   {s.value}
                 </span>
               </div>
@@ -88,11 +109,17 @@ export default function DesignSystemPage() {
         </div>
       </SectionCard>
 
-      <SectionCard title="2 · Typography" sub="Inter / system stack · tight display tracking.">
+      <SectionCard
+        title="2 · Typography"
+        sub="Inter / system stack · tight display tracking."
+      >
         {typeSamples.map((t) => (
           <div
             key={t.label}
-            style={{ padding: "12px 0", borderBottom: "1px dashed var(--ink-100)" }}
+            style={{
+              padding: "12px 0",
+              borderBottom: "1px dashed var(--ink-100)",
+            }}
           >
             <div
               style={{
@@ -112,7 +139,10 @@ export default function DesignSystemPage() {
         ))}
       </SectionCard>
 
-      <SectionCard title="3 · Buttons" sub="Primary, secondary, outline, danger — plus disabled.">
+      <SectionCard
+        title="3 · Buttons"
+        sub="Primary, secondary, outline, danger — plus disabled."
+      >
         <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
           <Button>Start session</Button>
           <Button variant="secondary">View plan</Button>
@@ -122,7 +152,10 @@ export default function DesignSystemPage() {
         </div>
       </SectionCard>
 
-      <SectionCard title="4 · Sample Inputs" sub="Live components — type to try them.">
+      <SectionCard
+        title="4 · Sample Inputs"
+        sub="Live components — type to try them."
+      >
         <TextInput
           id="showcase-name"
           label="Display name"
@@ -150,8 +183,18 @@ export default function DesignSystemPage() {
         />
       </SectionCard>
 
-      <SectionCard title="5 · Score & Streak" sub="SVG progress ring plus status badges.">
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, alignItems: "center" }}>
+      <SectionCard
+        title="5 · Score & Streak"
+        sub="SVG progress ring plus status badges."
+      >
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 16,
+            alignItems: "center",
+          }}
+        >
           <ScoreRing value={82} />
           <div>
             <div style={{ fontSize: 40 }}>🔥</div>

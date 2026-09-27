@@ -1,0 +1,7 @@
+node_modules/
+.next/
+dist/
+package-lock.json
+*.md
+design.html
+apps/admin/next-env.d.ts
