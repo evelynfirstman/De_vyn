@@ -7,6 +7,7 @@ import { errorHandler, notFound } from "./errors";
 import { healthRouter } from "./routes/health";
 import { catalogRouter } from "./routes/catalog";
 import { journeyRouter } from "./routes/journey";
+import { homeRouter } from "./routes/home";
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use((req, _res, next) => {
 app.use("/health", healthRouter);
 app.use("/v1", catalogRouter);
 app.use("/v1", journeyRouter);
+app.use("/v1", homeRouter);
 app.use(notFound);
 app.use(errorHandler);
 

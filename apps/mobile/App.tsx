@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -13,7 +13,7 @@ import { colors } from "@vyn/tokens";
 const DEMO_USER_ID = 1;
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:4000";
 
-type Screen = "profile" | "assessment" | "plan";
+type Screen = "profile" | "assessment" | "plan" | "home";
 
 type PlanItem = {
   day: string;
@@ -29,6 +29,24 @@ type Plan = {
   rationale: string;
 };
 
+type HomeData = {
+  date: string;
+  weekday: string;
+  todaySession: {
+    day: string;
+    title: string;
+    durationMin: number;
+    slug: string;
+  } | null;
+  score: { score: number; band: string } | null;
+  streak: { count: number; lastDate: string | null };
+  checkIn: { soreness: number; sleepHours: string; stress: number } | null;
+};
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 const GOAL_OPTIONS = [
   "Neck relief",
   "Back relief",
@@ -43,6 +61,17 @@ async function postJson(path: string, body: unknown) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+  const json = (await res.json()) as {
+    data?: unknown;
+    error?: { message: string };
+  };
+  if (!res.ok)
+    throw new Error(json.error?.message ?? `Request failed (${res.status})`);
+  return json.data;
+}
+
+async function getJson(path: string) {
+  const res = await fetch(`${API_URL}${path}`);
   const json = (await res.json()) as {
     data?: unknown;
     error?: { message: string };
@@ -138,6 +167,7 @@ export default function App() {
   const [stress, setStress] = useState(3);
 
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [home, setHome] = useState<HomeData | null>(null);
 
   const toggle = (list: string[], v: string, set: (l: string[]) => void) =>
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
@@ -186,6 +216,52 @@ export default function App() {
     }
   }
 
+  async function openHome() {
+    setBusy(true);
+    setError(null);
+    try {
+      const data = (await getJson(
+        `/v1/home?userId=${DEMO_USER_ID}&date=${todayStr()}`,
+      )) as HomeData;
+      setHome(data);
+      setScreen("home");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Load failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (screen === "home" && home === null && !busy) {
+      openHome();
+    }
+  }, [screen]);
+
+  async function submitCheckIn() {
+    setBusy(true);
+    setError(null);
+    try {
+      await postJson("/v1/check-ins", {
+        userId: DEMO_USER_ID,
+        date: todayStr(),
+        soreness,
+        sleepHours: Number(sleep) || 0,
+        stress,
+        activity: "",
+        timezone: "UTC",
+      });
+      const data = (await getJson(
+        `/v1/home?userId=${DEMO_USER_ID}&date=${todayStr()}`,
+      )) as HomeData;
+      setHome(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Vyn Therapy</Text>
@@ -194,7 +270,9 @@ export default function App() {
           ? "Step 1 of 3 · Profile"
           : screen === "assessment"
             ? "Step 2 of 3 · Assessment"
-            : "Step 3 of 3 · Your plan"}
+            : screen === "plan"
+              ? "Step 3 of 3 · Your plan"
+              : "Home · Daily check-in"}
       </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -298,11 +376,103 @@ export default function App() {
             </View>
           ))}
           <Text style={styles.rationale}>{plan.rationale}</Text>
+          <Pressable style={styles.primary} onPress={openHome} disabled={busy}>
+            <Text style={styles.primaryText}>
+              {busy ? "Loading…" : "Open Home"}
+            </Text>
+          </Pressable>
           <Pressable
             style={styles.secondary}
             onPress={() => setScreen("profile")}
           >
             <Text style={styles.secondaryText}>Start over</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {screen === "home" && (
+        <View>
+          <View style={styles.homeTop}>
+            <View
+              style={[
+                styles.scoreCircle,
+                {
+                  borderColor:
+                    home?.score?.band === "high"
+                      ? colors.score.high
+                      : home?.score?.band === "mid"
+                        ? colors.score.mid
+                        : colors.score.low,
+                },
+              ]}
+            >
+              <Text style={styles.scoreNum}>{home?.score?.score ?? "–"}</Text>
+            </View>
+            <View>
+              <Text style={styles.streakFlame}>
+                🔥 {home?.streak.count ?? 0}-day streak
+              </Text>
+              <Text style={styles.cardSub}>
+                {home
+                  ? `${home.weekday} ${home.date}${home.checkIn ? " · checked in" : " · not checked in yet"}`
+                  : "Loading…"}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.label}>Today&apos;s session</Text>
+          {home?.todaySession ? (
+            <View style={styles.card}>
+              <Text style={styles.cardDay}>{home.todaySession.day}</Text>
+              <Text style={styles.cardTitle}>{home.todaySession.title}</Text>
+              <Text style={styles.cardSub}>
+                {home.todaySession.durationMin} min · {home.todaySession.slug}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Rest day</Text>
+              <Text style={styles.cardSub}>
+                No session planned — light movement only.
+              </Text>
+            </View>
+          )}
+
+          <Text style={styles.label}>Daily check-in</Text>
+          <NumberRow
+            label="Soreness (1–5)"
+            value={soreness}
+            min={1}
+            max={5}
+            onChange={setSoreness}
+          />
+          <Text style={styles.label}>Sleep hours</Text>
+          <TextInput
+            style={styles.input}
+            value={sleep}
+            onChangeText={setSleep}
+            keyboardType="numeric"
+            placeholder="e.g. 7"
+            placeholderTextColor={colors.ink[500]}
+          />
+          <NumberRow
+            label="Stress (1–5)"
+            value={stress}
+            min={1}
+            max={5}
+            onChange={setStress}
+          />
+          <Pressable
+            style={styles.primary}
+            onPress={submitCheckIn}
+            disabled={busy}
+          >
+            <Text style={styles.primaryText}>
+              {busy ? "Saving…" : "Submit check-in"}
+            </Text>
+          </Pressable>
+          <Pressable style={styles.secondary} onPress={() => setScreen("plan")}>
+            <Text style={styles.secondaryText}>View my plan</Text>
           </Pressable>
         </View>
       )}
@@ -394,4 +564,21 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 17, fontWeight: "700", marginTop: 2 },
   cardSub: { fontSize: 14, color: colors.ink[500], marginTop: 2 },
   rationale: { fontSize: 13, color: colors.ink[500], marginTop: 12 },
+  homeTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginBottom: 8,
+  },
+  scoreCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  scoreNum: { fontSize: 26, fontWeight: "800", color: colors.ink[900] },
+  streakFlame: { fontSize: 18, fontWeight: "700" },
 });
