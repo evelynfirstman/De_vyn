@@ -11,5 +11,8 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["App.tsx"]
+  "include": [
+    "App.tsx"
+  ],
+  "extends": "expo/tsconfig.base"
 }

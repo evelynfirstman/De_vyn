@@ -4,3 +4,5 @@ out/
 *.tsbuildinfo
 .env*.local
 .next-start*.log
+.expo-web*.log
+.expo/
