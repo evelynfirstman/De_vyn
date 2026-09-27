@@ -26,6 +26,15 @@ export function notFound(_req: Request, res: Response): void {
     .json({ error: { code: "NOT_FOUND", message: "Route not found" } });
 }
 
+function isPgForeignKeyViolation(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    err.code === "23503"
+  );
+}
+
 export function errorHandler(
   err: unknown,
   _req: Request,
@@ -49,6 +58,12 @@ export function errorHandler(
         message: err.message,
         details: err.details ?? null,
       },
+    });
+    return;
+  }
+  if (isPgForeignKeyViolation(err)) {
+    res.status(404).json({
+      error: { code: "USER_NOT_FOUND", message: "User does not exist" },
     });
     return;
   }

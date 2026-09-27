@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "Vyn Therapy",
+    "slug": "vyn-therapy",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "newArchEnabled": false
+  }
+}
