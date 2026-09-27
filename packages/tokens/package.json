@@ -1,0 +1,9 @@
+{
+  "name": "@vyn/tokens",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./tokens.ts",
+    "./tokens.css": "./tokens.css",
+    "./package.json": "./package.json"
+  }
+}

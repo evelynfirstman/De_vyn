@@ -1,217 +1,99 @@
-# **Vyn Therapy Admin & App Product Requirements Document (PRD)**
+# **Vyn Therapy Expanded Business PRD**
 
 ## **Vision**
 
-To become the world's most trusted digital recovery companion by making recovery simple, personalized, and accessible.
+AI-powered recovery companion for knowledge workers.
 
 ## **Mission**
 
-Help people recover smarter through education, guided routines, AI-powered coaching, and curated recovery products.
+Deliver personalized recovery guidance, education, habit building and curated products.
 
 ## **Value Proposition**
 
-A recovery ecosystem that combines education, personalized guidance, habit-building and commerce.
+Complete recovery ecosystem instead of product-only commerce.
 
-## **Problem Statement**
+## **Problem**
 
-People often buy recovery products without guidance, resulting in inconsistent use and poor outcomes.
+Desk-based professionals suffer recurring physical strain and lack integrated recovery support.
 
-&nbsp;
+## **Target Persona**
 
-## **Objectives**
-
-·       Deliver daily recovery plans
-
-·       Increase repeat product purchases
-
-·       Build subscription revenue
-
-·       Support dropshipping via Shopify
-
-## **Goals**
-
-·       Improve recovery outcomes
-
-·       Increase repeat purchases
-
-·       Build customer loyalty
-
-·       Create a premium recovery brand
-
-## **Target Users**
-
-·       Office workers
-
-·       Athletes
-
-·       Parents
-
-·       Healthcare workers
-
-·       Travelers
-
-·       Older adults
+·       Knowledge workers  
+·       Future: active professionals, healthcare workers
 
 ## **Customer Journey**
 
-1\.       Discover
+1\.       Discover  
+2\.       Purchase  
+3\.       Download App  
+4\.       Profile  
+5\.       Assessment  
+6\.       Recovery Plan  
+7\.       Guided Session  
+8\.       Progress  
+9\.       Recommendations  
+10\.   Repeat Purchase  
+11\.   Subscription  
+12\.   Advocacy
 
-2\.       Explore
+## **User App Features**
 
-3\.       Purchase
+### **Home**
 
-4\.       Onboard
+·       Check-in  
+·       Recovery score  
+·       Plan  
+·       Streak
 
-5\.       Recover Daily
+### **Recover**
 
-6\.       Retain
-
-7\.       Advocate
-
-## **User Roles**
-
-·       Customer
-
-·       Super Admin
-
-·       Operations Manager
-
-·       Content Manager
-
-·       Customer Support
-
-·       Marketing Manager
-
-·       Data Analyst
-
-·       Finance/Admin
-
-## **Customer MVP Features**
-
-·       Onboarding profile
-
-·       Daily assessment
-
-·       AI recovery plan
-
+·       Programs  
 ·       Guided sessions
 
-·       Progress tracking
+### **Learn**
 
-·       Product library
+·       Articles  
+·       Videos
 
-·       QR code scanning
+### **Shop**
 
-·       Shopify-powered shopping
+·       Problem-first shopping  
+·       Bundles
 
-·       Educational library
+### **Progress**
 
-·       Notifications
+·       Analytics  
+·       Milestones
 
-## **Phase 2**
+### **Profile**
 
-·       AI Recovery Coach
+·       Orders  
+·       Goals
 
-·       Recovery score
+## **Admin Features**
 
-·       Personalized recommendations
-
-·       Daily check-ins
-
-·       Premium subscription
-
-## **Admin Modules**
-
-·       Dashboard
-
-·       User Management
-
-·       Product Sync
-
-·       Orders
-
-·       Recovery Programs
-
-·       Exercise Library
-
-·       AI Knowledge Base
-
-·       Content Management
-
-·       QR Code Manager
-
-·       Notification Center
-
-·       Analytics
-
-·       Marketing
-
-·       Customer Support
-
-·       Subscriptions
-
-·       Reports
-
-·       Settings
-
-&nbsp;
-
-## **Success Metrics**
-
-·       DAU
-
-·       Retention
-
-·       Routine completion
-
-·       Repeat purchase
-
-·       Subscription conversion
-
-·       CSAT
-
-# **Vyn Therapy Product Requirements Document (Business PRD)**
-
-&nbsp;
-
-## **Core Functional Requirements**
-
-### **Customer App**
-
-·       Onboarding
-
-·       Assessment
-
-·       Recovery Plans
-
-·       Guided Sessions
-
-·       Education
-
-·       Progress
-
-·       Shopping
-
-### **Admin Portal**
-
-·       Dashboard
-
-·       Users
-
-·       Products
-
-·       Orders
-
-·       Programs
-
-·       Content
-
-·       Notifications
-
-·       Analytics
-
+·       Dashboard  
+·       Users  
+·       Products  
+·       Orders  
+·       Programs  
+·       Content  
+·       AI KB  
+·       QR  
+·       Notifications  
+·       Analytics  
 ·       Support
 
-&nbsp;
+## **Locked Technical Decisions**
 
-&nbsp;
+Decided with stakeholder; implementation must follow `docs/implementation-plan.md`.
+
+·       **User app:** React Native via Expo (iOS + Android, OTA updates) — NOT Next.js web
+·       **Admin portal:** Next.js (TypeScript)
+·       **Backend API:** Node.js (NestJS recommended)
+·       **Auth:** Better Auth, self-hosted + Postgres — NO Supabase, no per-user-fee vendor
+·       **Storage:** Cloudflare R2 (S3-compatible) + CDN for videos, images, product media
+·       **Payments:** Flutterwave for checkout, refunds, repeat purchase and subscriptions — NO Stripe
+·       **Commerce/fulfillment:** NO Shopify. Own product/bundle catalog in Postgres is the system of record. Interim fulfillment via a minimal external WooCommerce bridge store (invisible to customers) so TeemDrop auto-sync can fulfill orders; swap to a direct TeemDrop API behind the same provider interface once confirmed
+·       **"Download App" journey step** = native store install (Expo) with push, camera QR scan, offline guided sessions
+

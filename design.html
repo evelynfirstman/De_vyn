@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vyn Therapy — Design System Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* Brand */
+    --brand-900: #0b3d36;
+    --brand-700: #0e5f54;
+    --brand-500: #12836f;   /* primary */
+    --brand-300: #5cb8a3;
+    --brand-100: #dcf2ea;
+    --brand-50:  #eefaf5;
+    /* Accent (streak / energy) */
+    --accent-600: #d9622b;
+    --accent-500: #f97316;
+    --accent-100: #ffedd5;
+    /* Neutrals */
+    --ink-900: #101828;
+    --ink-700: #344054;
+    --ink-500: #667085;
+    --ink-300: #d0d5dd;
+    --ink-100: #f2f4f7;
+    --ink-50:  #f9fafb;
+    --white:   #ffffff;
+    /* Semantic — recovery score bands */
+    --score-low:  #e5484d;
+    --score-mid:  #f5a524;
+    --score-high: #18a957;
+    --danger: #d92d20;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "cv11", "ss01";
+    font-size: 16px;
+    background: var(--ink-50);
+    color: var(--ink-900);
+    padding: 40px 24px;
+    line-height: 1.6;
+  }
+  .page { max-width: 960px; margin: 0 auto; }
+  header.hero {
+    background: linear-gradient(135deg, var(--brand-900), var(--brand-500));
+    color: #fff;
+    border-radius: 16px;
+    padding: 40px 32px;
+    margin-bottom: 32px;
+  }
+  header.hero h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; }
+  header.hero p { opacity: 0.85; margin-top: 8px; font-size: 16px; }
+  section.card {
+    background: var(--white);
+    border: 1px solid var(--ink-100);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  section.card h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  section.card > p.sub { color: var(--ink-500); font-size: 14px; margin-bottom: 20px; }
+
+  /* Colors */
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .swatch { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--ink-100); }
+  .swatch .chip { height: 64px; }
+  .swatch .meta { padding: 8px 10px; font-size: 12px; }
+  .swatch .meta b { display: block; font-size: 13px; }
+  .swatch .meta span { color: var(--ink-500); font-family: monospace; }
+
+  /* Typography */
+  .type-row { padding: 12px 0; border-bottom: 1px dashed var(--ink-100); }
+  .type-row:last-child { border-bottom: none; }
+  .type-row .label { font-size: 12px; color: var(--ink-500); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+  .t-display { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; }
+  .t-h1 { font-size: 24px; font-weight: 700; }
+  .t-h2 { font-size: 20px; font-weight: 700; }
+  .t-h3 { font-size: 16px; font-weight: 600; }
+  .t-body { font-size: 15px; }
+  .t-caption { font-size: 13px; color: var(--ink-500); }
+
+  /* Buttons */
+  .btn-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn {
+    font-family: inherit;
+    font-size: 15px; font-weight: 600;
+    padding: 12px 24px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.06s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--brand-500); color: #fff; }
+  .btn-primary:hover { background: var(--brand-700); box-shadow: 0 4px 14px rgba(18,131,111,.35); }
+  .btn-secondary { background: var(--brand-100); color: var(--brand-900); }
+  .btn-secondary:hover { background: #c9e9dc; }
+  .btn-outline { background: transparent; border-color: var(--brand-500); color: var(--brand-700); }
+  .btn-outline:hover { background: var(--brand-50); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { filter: brightness(1.08); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+  /* Inputs */
+  .field { margin-bottom: 16px; max-width: 420px; }
+  .field label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .field input, .field textarea {
+    width: 100%;
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--ink-900);
+    background: var(--white);
+    border: 1.5px solid var(--ink-300);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .field input::placeholder, .field textarea::placeholder { color: var(--ink-500); }
+  .field input:focus, .field textarea:focus {
+    border-color: var(--brand-500);
+    box-shadow: 0 0 0 4px var(--brand-100);
+  }
+  .field .hint { font-size: 13px; color: var(--ink-500); margin-top: 6px; }
+  .field .error-msg { font-size: 13px; color: var(--danger); margin-top: 6px; }
+  .field.invalid input { border-color: var(--danger); }
+  .field.invalid input:focus { box-shadow: 0 0 0 4px rgba(217,45,32,.12); }
+
+  /* Score + streak demo */
+  .demo-row { display: flex; flex-wrap: wrap; gap: 16px; }
+  .score-card {
+    flex: 1 1 220px;
+    background: var(--brand-50);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+  }
+  .ring {
+    width: 96px; height: 96px; margin: 0 auto 12px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 800; color: #fff;
+  }
+  .ring.high { background: conic-gradient(var(--score-high) 0 82%, var(--ink-100) 82% 100%); }
+  .ring-inner {
+    width: 72px; height: 72px; border-radius: 50%;
+    background: #fff; color: var(--ink-900);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .streak { font-size: 40px; }
+  .badge {
+    display: inline-block; font-size: 13px; font-weight: 600;
+    padding: 4px 12px; border-radius: 999px; margin: 2px 4px 2px 0;
+  }
+  .badge-low { background: rgba(229,72,77,.12); color: var(--score-low); }
+  .badge-mid { background: rgba(245,165,36,.15); color: #b7791f; }
+  .badge-high { background: rgba(24,169,87,.12); color: var(--score-high); }
+  .badge-streak { background: var(--accent-100); color: var(--accent-600); }
+  footer { text-align: center; color: var(--ink-500); font-size: 13px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1>Vyn Therapy — Design System Preview</h1>
+    <p>Colors · Typography · Buttons · Inputs · Score &amp; Streak samples</p>
+  </header>
+
+  <!-- COLORS -->
+  <section class="card">
+    <h2>1 · Colors</h2>
+    <p class="sub">Brand teal, warm streak accent, neutrals, and recovery-score bands.</p>
+    <div class="swatches">
+      <div class="swatch"><div class="chip" style="background:#12836f"></div><div class="meta"><b>Brand 500 · Primary</b><span>#12836F</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#0e5f54"></div><div class="meta"><b>Brand 700 · Hover</b><span>#0E5F54</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#0b3d36"></div><div class="meta"><b>Brand 900 · Hero</b><span>#0B3D36</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#dcf2ea"></div><div class="meta"><b>Brand 100 · Tint</b><span>#DCF2EA</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#f97316"></div><div class="meta"><b>Accent · Streak</b><span>#F97316</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#101828"></div><div class="meta"><b>Ink 900 · Text</b><span>#101828</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#667085"></div><div class="meta"><b>Ink 500 · Muted</b><span>#667085</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#f2f4f7"></div><div class="meta"><b>Ink 100 · Border</b><span>#F2F4F7</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#e5484d"></div><div class="meta"><b>Score · Low</b><span>#E5484D</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#f5a524"></div><div class="meta"><b>Score · Mid</b><span>#F5A524</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#18a957"></div><div class="meta"><b>Score · High</b><span>#18A957</span></div></div>
+      <div class="swatch"><div class="chip" style="background:#d92d20"></div><div class="meta"><b>Danger</b><span>#D92D20</span></div></div>
+    </div>
+  </section>
+
+  <!-- TYPOGRAPHY -->
+  <section class="card">
+    <h2>2 · Typography</h2>
+    <p class="sub">Inter / system stack · 4pt spacing rhythm · tight display tracking.</p>
+    <div class="type-row"><div class="label">Display · 32 / 800</div><div class="t-display">Recover smarter, every day</div></div>
+    <div class="type-row"><div class="label">H1 · 24 / 700</div><div class="t-h1">Today's recovery plan</div></div>
+    <div class="type-row"><div class="label">H2 · 20 / 700</div><div class="t-h2">Guided sessions</div></div>
+    <div class="type-row"><div class="label">H3 · 16 / 600</div><div class="t-h3">Neck &amp; shoulder reset · 12 min</div></div>
+    <div class="type-row"><div class="label">Body · 15 / 400</div><div class="t-body">Check in daily so your recovery score reflects how you actually feel — soreness, sleep, stress and movement.</div></div>
+    <div class="type-row"><div class="label">Caption · 13 / muted</div><div class="t-caption">Streaks are timezone-safe · plan updates after each check-in</div></div>
+  </section>
+
+  <!-- BUTTONS -->
+  <section class="card">
+    <h2>3 · Buttons</h2>
+    <p class="sub">Primary, secondary, outline, danger — plus disabled state.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary">Start session</button>
+      <button class="btn btn-secondary">View plan</button>
+      <button class="btn btn-outline">Browse programs</button>
+      <button class="btn btn-danger">Cancel order</button>
+      <button class="btn btn-primary" disabled>Disabled</button>
+    </div>
+  </section>
+
+  <!-- INPUTS -->
+  <section class="card">
+    <h2>4 · Sample Inputs</h2>
+    <p class="sub">Default, focus (click inside), and invalid states.</p>
+    <div class="field">
+      <label for="in-name">Display name</label>
+      <input id="in-name" type="text" placeholder="e.g. Adaeze O." />
+      <div class="hint">Shown on your profile and streak card.</div>
+    </div>
+    <div class="field">
+      <label for="in-checkin">Daily check-in note</label>
+      <textarea id="in-checkin" rows="3" placeholder="How does your neck feel this morning?"></textarea>
+    </div>
+    <div class="field invalid">
+      <label for="in-goal">Weekly goal (sessions)</label>
+      <input id="in-goal" type="text" value="nine" />
+      <div class="error-msg">Enter a number between 1 and 7.</div>
+    </div>
+  </section>
+
+  <!-- SCORE / STREAK -->
+  <section class="card">
+    <h2>5 · Score &amp; Streak Samples</h2>
+    <p class="sub">Progress ring, streak flame, and status badges.</p>
+    <div class="demo-row">
+      <div class="score-card">
+        <div class="ring high"><div class="ring-inner">82</div></div>
+        <b>Recovery score</b>
+        <div><span class="badge badge-high">High · Ready</span></div>
+      </div>
+      <div class="score-card">
+        <div class="streak">🔥</div>
+        <b>7-day streak</b>
+        <div><span class="badge badge-streak">Personal best</span></div>
+      </div>
+      <div class="score-card" style="background:#fff;border:1px solid var(--ink-100)">
+        <b>Status badges</b>
+        <div style="margin-top:10px">
+          <span class="badge badge-low">Low · Rest</span>
+          <span class="badge badge-mid">Mid · Easy day</span>
+          <span class="badge badge-high">High · Ready</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>Vyn Therapy design preview · tokens live in <code>packages/tokens</code> (Phase 1)</footer>
+</div>
+</body>
+</html>

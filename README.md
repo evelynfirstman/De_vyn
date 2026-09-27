@@ -1,107 +1,75 @@
-# Vyn Therapy — Digital Recovery Companion
+# Vyn Therapy — AI-Powered Recovery Companion
 
 ## Vision
-To become the world's most trusted digital recovery companion by making recovery simple, personalized, and accessible.
+AI-powered recovery companion for knowledge workers.
 
 ## Mission
-Help people recover smarter through education, guided routines, AI-powered coaching, and curated recovery products.
+Deliver personalized recovery guidance, education, habit building and curated products.
 
 ## Value Proposition
-A recovery ecosystem that combines education, personalized guidance, habit-building and commerce.
+Complete recovery ecosystem instead of product-only commerce.
 
-## Problem Statement
-People often buy recovery products without guidance, resulting in inconsistent use and poor outcomes.
+## Problem
+Desk-based professionals suffer recurring physical strain and lack integrated recovery support.
 
-## Objectives
-- Deliver daily recovery plans
-- Increase repeat product purchases
-- Build subscription revenue
-- Support dropshipping via Shopify
-
-## Goals
-- Improve recovery outcomes
-- Increase repeat purchases
-- Build customer loyalty
-- Create a premium recovery brand
-
-## Target Users
-- Office workers
-- Athletes
-- Parents
-- Healthcare workers
-- Travelers
-- Older adults
+## Target Persona
+- Knowledge workers
+- Future: active professionals, healthcare workers
 
 ## Customer Journey
 1. Discover
-2. Explore
-3. Purchase
-4. Onboard
-5. Recover Daily
-6. Retain
-7. Advocate
+2. Purchase
+3. Download App
+4. Profile
+5. Assessment
+6. Recovery Plan
+7. Guided Session
+8. Progress
+9. Recommendations
+10. Repeat Purchase
+11. Subscription
+12. Advocacy
 
-## User Roles
-- Customer
-- Super Admin
-- Operations Manager
-- Content Manager
-- Customer Support
-- Marketing Manager
-- Data Analyst
-- Finance/Admin
+## User App Features
 
-## Customer App — MVP Features
-- Onboarding profile
-- Daily assessment
-- AI recovery plan
-- Guided sessions
-- Progress tracking
-- Product library
-- QR code scanning
-- Shopify-powered shopping
-- Educational library
-- Notifications
-
-## Phase 2 — Planned
-- AI Recovery Coach
+### Home
+- Check-in
 - Recovery score
-- Personalized recommendations
-- Daily check-ins
-- Premium subscription
+- Plan
+- Streak
 
-## Admin Portal Modules
-- Dashboard
-- User Management
-- Product Sync (Shopify)
-- Orders
-- Recovery Programs
-- Exercise Library
-- AI Knowledge Base
-- Content Management
-- QR Code Manager
-- Notification Center
+### Recover
+- Programs
+- Guided sessions
+
+### Learn
+- Articles
+- Videos
+
+### Shop
+- Problem-first shopping
+- Bundles
+
+### Progress
 - Analytics
-- Marketing
-- Customer Support
-- Subscriptions
-- Reports
-- Settings
+- Milestones
 
-## Core Functional Requirements Summary
-### Customer App
-Onboarding, Assessment, Recovery Plans, Guided Sessions, Education, Progress, Shopping
+### Profile
+- Orders
+- Goals
 
-### Admin Portal
-Dashboard, Users, Products, Orders, Programs, Content, Notifications, Analytics, Support
-
-## Success Metrics
-- DAU
-- Retention
-- Routine completion
-- Repeat purchase
-- Subscription conversion
-- CSAT
+## Admin Features
+- Dashboard
+- Users
+- Products
+- Orders
+- Programs
+- Content
+- AI KB
+- QR
+- Notifications
+- Analytics
+- Support
 
 ## Repo Structure
 ```
@@ -115,8 +83,7 @@ Dashboard, Users, Products, Orders, Programs, Content, Notifications, Analytics,
 This repo currently holds product docs. App / admin implementation to follow.
 
 1. Read `docs/prd-vyn.md` for full PRD
-2. See MVP features above for build scope
-3. Phase 2 items are out of scope for MVP
+2. See user app features above for build scope (Home, Recover, Learn, Shop, Progress, Profile)
 
 ## Source
-Consolidated from `docs/prd-vyn.md`.
+Consolidated from `docs/prd-vyn.md` (Vyn Therapy Expanded Business PRD).

@@ -1,0 +1,18 @@
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue",
+    Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: var(--ink-50);
+  color: var(--ink-900);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--ink-100);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 0.9em;
+}
