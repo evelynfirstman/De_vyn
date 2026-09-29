@@ -8,6 +8,8 @@ import { healthRouter } from "./routes/health";
 import { catalogRouter } from "./routes/catalog";
 import { journeyRouter } from "./routes/journey";
 import { homeRouter } from "./routes/home";
+import { sessionsRouter } from "./routes/sessions";
+import { adminProgramsRouter } from "./routes/adminPrograms";
 
 const app = express();
 
@@ -22,6 +24,8 @@ app.use("/health", healthRouter);
 app.use("/v1", catalogRouter);
 app.use("/v1", journeyRouter);
 app.use("/v1", homeRouter);
+app.use("/v1", sessionsRouter);
+app.use("/v1", adminProgramsRouter);
 app.use(notFound);
 app.use(errorHandler);
 

@@ -8,12 +8,14 @@ import {
   View,
 } from "react-native";
 import { colors } from "@vyn/tokens";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Demo actor until Better Auth lands (Phase 2b).
 const DEMO_USER_ID = 1;
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:4000";
 
-type Screen = "profile" | "assessment" | "plan" | "home";
+type Screen =
+  "profile" | "assessment" | "plan" | "home" | "recover" | "program";
 
 type PlanItem = {
   day: string;
@@ -45,6 +47,64 @@ type HomeData = {
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+type ProgramStep = {
+  name: string;
+  seconds: number;
+};
+
+type Program = {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  level: string;
+  duration_min: number;
+  steps: ProgramStep[];
+  problemTags: string[];
+};
+
+type QueuedCompletion = {
+  userId: number;
+  programId: number;
+  durationSec: number;
+  queuedAt: string;
+};
+
+const QUEUE_KEY = "vyn:pending-completions";
+
+async function readQueue(): Promise<QueuedCompletion[]> {
+  try {
+    const raw = await AsyncStorage.getItem(QUEUE_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as QueuedCompletion[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Push queued completions to the API; stops at first failure (offline). */
+async function flushQueue(): Promise<number> {
+  const queue = await readQueue();
+  let sent = 0;
+  for (let i = 0; i < queue.length; i++) {
+    const item = queue[i];
+    try {
+      await postJson("/v1/sessions/complete", {
+        userId: item.userId,
+        programId: item.programId,
+        durationSec: item.durationSec,
+      });
+      sent += 1;
+    } catch {
+      await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue.slice(i)));
+      return sent;
+    }
+  }
+  await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify([]));
+  return sent;
 }
 
 const GOAL_OPTIONS = [
@@ -169,6 +229,15 @@ export default function App() {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [home, setHome] = useState<HomeData | null>(null);
 
+  const [programs, setPrograms] = useState<Program[] | null>(null);
+  const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
+  const [stepIdx, setStepIdx] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [timerOn, setTimerOn] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [doneMsg, setDoneMsg] = useState<string | null>(null);
+
   const toggle = (list: string[], v: string, set: (l: string[]) => void) =>
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -262,6 +331,114 @@ export default function App() {
     }
   }
 
+  async function refreshPending() {
+    setPendingCount((await readQueue()).length);
+  }
+
+  async function loadPrograms() {
+    setBusy(true);
+    setError(null);
+    try {
+      const data = (await getJson("/v1/programs?pageSize=50")) as {
+        data: Program[];
+      };
+      setPrograms(data.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Load failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openProgram(slug: string) {
+    setBusy(true);
+    setError(null);
+    setDoneMsg(null);
+    try {
+      const data = (await getJson(`/v1/programs/${slug}`)) as Program;
+      setSelectedProgram(data);
+      setStepIdx(0);
+      setSecondsLeft(data.steps.length > 0 ? data.steps[0].seconds : 0);
+      setTimerOn(false);
+      setFinished(data.steps.length === 0);
+      setScreen("program");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Load failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function skipStep() {
+    if (selectedProgram === null) return;
+    if (stepIdx >= selectedProgram.steps.length - 1) {
+      setTimerOn(false);
+      setFinished(true);
+    } else {
+      const next = stepIdx + 1;
+      setStepIdx(next);
+      setSecondsLeft(selectedProgram.steps[next].seconds);
+    }
+  }
+
+  async function completeSession() {
+    if (selectedProgram === null) return;
+    setBusy(true);
+    setError(null);
+    setDoneMsg(null);
+    const total = selectedProgram.steps.reduce((a, s) => a + s.seconds, 0);
+    const payload = {
+      userId: DEMO_USER_ID,
+      programId: selectedProgram.id,
+      durationSec: total,
+    };
+    try {
+      await postJson("/v1/sessions/complete", payload);
+      const sent = await flushQueue();
+      await refreshPending();
+      setDoneMsg(
+        sent > 0
+          ? `Saved ✓ (+${sent} queued synced)`
+          : "Saved ✓ — score updated",
+      );
+    } catch {
+      const queue = await readQueue();
+      queue.push({ ...payload, queuedAt: new Date().toISOString() });
+      await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+      await refreshPending();
+      setDoneMsg("Offline — saved on device, will sync");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (screen === "recover" && programs === null && !busy) {
+      void loadPrograms();
+    }
+  }, [screen, programs, busy]);
+
+  useEffect(() => {
+    void refreshPending();
+  }, []);
+
+  useEffect(() => {
+    if (!timerOn || selectedProgram === null) return;
+    if (secondsLeft <= 0) {
+      if (stepIdx >= selectedProgram.steps.length - 1) {
+        setTimerOn(false);
+        setFinished(true);
+      } else {
+        const next = stepIdx + 1;
+        setStepIdx(next);
+        setSecondsLeft(selectedProgram.steps[next].seconds);
+      }
+      return;
+    }
+    const t = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [timerOn, secondsLeft, stepIdx, selectedProgram]);
+
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Vyn Therapy</Text>
@@ -272,7 +449,11 @@ export default function App() {
             ? "Step 2 of 3 · Assessment"
             : screen === "plan"
               ? "Step 3 of 3 · Your plan"
-              : "Home · Daily check-in"}
+              : screen === "home"
+                ? "Home · Daily check-in"
+                : screen === "recover"
+                  ? "Recover · Programs"
+                  : "Recover · Guided session"}
       </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -474,6 +655,98 @@ export default function App() {
           <Pressable style={styles.secondary} onPress={() => setScreen("plan")}>
             <Text style={styles.secondaryText}>View my plan</Text>
           </Pressable>
+          <Pressable
+            style={styles.secondary}
+            onPress={() => setScreen("recover")}
+          >
+            <Text style={styles.secondaryText}>Browse programs</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {screen === "recover" && (
+        <View>
+          {pendingCount > 0 ? (
+            <Text style={styles.pendingBanner}>
+              {pendingCount} session(s) saved offline — will sync
+            </Text>
+          ) : null}
+          {busy && programs === null ? (
+            <Text style={styles.cardSub}>Loading…</Text>
+          ) : null}
+          {(programs ?? []).map((p) => (
+            <Pressable
+              key={p.slug}
+              style={styles.card}
+              onPress={() => {
+                void openProgram(p.slug);
+              }}
+            >
+              <Text style={styles.cardDay}>
+                {p.level} · {p.duration_min} min
+              </Text>
+              <Text style={styles.cardTitle}>{p.title}</Text>
+              <Text style={styles.cardSub}>{p.description}</Text>
+            </Pressable>
+          ))}
+          <Pressable style={styles.secondary} onPress={() => setScreen("home")}>
+            <Text style={styles.secondaryText}>Back to Home</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {screen === "program" && selectedProgram && (
+        <View>
+          <Text style={styles.label}>{selectedProgram.title}</Text>
+          <Text style={styles.cardSub}>{selectedProgram.description}</Text>
+          {selectedProgram.steps.map((s, i) => (
+            <View
+              key={s.name}
+              style={[styles.card, i === stepIdx && styles.cardActive]}
+            >
+              <Text style={styles.cardDay}>
+                Step {i + 1} of {selectedProgram.steps.length}
+              </Text>
+              <Text style={styles.cardTitle}>{s.name}</Text>
+              <Text style={styles.cardSub}>
+                {i === stepIdx ? `${secondsLeft}s left` : `${s.seconds}s`}
+              </Text>
+            </View>
+          ))}
+          {doneMsg ? <Text style={styles.doneMsg}>{doneMsg}</Text> : null}
+          <View style={styles.btnRow}>
+            <Pressable
+              style={styles.primary}
+              onPress={() => setTimerOn(!timerOn)}
+            >
+              <Text style={styles.primaryText}>
+                {timerOn ? "Pause" : "Start / Resume"}
+              </Text>
+            </Pressable>
+            <Pressable style={styles.secondary} onPress={skipStep}>
+              <Text style={styles.secondaryText}>Skip step</Text>
+            </Pressable>
+          </View>
+          <Pressable
+            style={[styles.primary, !finished && { opacity: 0.45 }]}
+            disabled={!finished || busy}
+            onPress={() => {
+              void completeSession();
+            }}
+          >
+            <Text style={styles.primaryText}>
+              {busy ? "Saving…" : "Complete session"}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={styles.secondary}
+            onPress={() => {
+              setTimerOn(false);
+              setScreen("recover");
+            }}
+          >
+            <Text style={styles.secondaryText}>All programs</Text>
+          </Pressable>
         </View>
       )}
     </ScrollView>
@@ -581,4 +854,16 @@ const styles = StyleSheet.create({
   },
   scoreNum: { fontSize: 26, fontWeight: "800", color: colors.ink[900] },
   streakFlame: { fontSize: 18, fontWeight: "700" },
+  cardActive: { borderColor: colors.brand[500], borderWidth: 2 },
+  btnRow: { flexDirection: "row", gap: 10, marginTop: 16 },
+  pendingBanner: {
+    backgroundColor: colors.accent[100],
+    color: colors.accent[600],
+    fontWeight: "700",
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+    overflow: "hidden",
+  },
+  doneMsg: { fontSize: 14, fontWeight: "700", marginTop: 12 },
 });

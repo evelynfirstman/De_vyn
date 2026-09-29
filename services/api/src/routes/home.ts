@@ -35,6 +35,19 @@ function streakKey(userId: number): string {
   return `streak:${userId}`;
 }
 
+/** Sessions completed in the 7 days ending on `date` (score bonus input). */
+async function countCompletionsLast7Days(
+  userId: number,
+  date: string,
+): Promise<number> {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*)::int AS total FROM session_completions
+      WHERE user_id = $1 AND completed_at >= ($2::date - INTERVAL '6 days')`,
+    [userId, date],
+  );
+  return rows[0].total as number;
+}
+
 /** Rebuild streak state from Postgres when Redis is unavailable. */
 async function rebuildStreak(
   userId: number,
@@ -107,12 +120,12 @@ homeRouter.post("/check-ins", async (req, res, next) => {
       )
     ).rows[0];
 
-    // TODO Phase 5: count real session completions instead of 0.
+    const completions = await countCompletionsLast7Days(body.userId, body.date);
     const result = computeScoreV1({
       soreness: body.soreness,
       sleepHours: body.sleepHours,
       stress: body.stress,
-      completionsLast7Days: 0,
+      completionsLast7Days: completions,
     });
 
     const score = (
@@ -132,7 +145,7 @@ homeRouter.post("/check-ins", async (req, res, next) => {
             soreness: body.soreness,
             sleepHours: body.sleepHours,
             stress: body.stress,
-            completionsLast7Days: 0,
+            completionsLast7Days: completions,
             breakdown: result.breakdown,
           }),
         ],

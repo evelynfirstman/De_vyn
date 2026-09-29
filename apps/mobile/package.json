@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~4.0.1",
+    "@react-native-async-storage/async-storage": "^2.1.0",
     "@vyn/tokens": "*",
     "expo": "^52.0.0",
     "expo-asset": "^11.0.0",
