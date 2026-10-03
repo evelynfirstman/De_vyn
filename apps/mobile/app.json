@@ -4,6 +4,12 @@
     "slug": "vyn-therapy",
     "version": "0.1.0",
     "orientation": "portrait",
-    "newArchEnabled": false
+    "newArchEnabled": false,
+    "ios": {
+      "bundleIdentifier": "com.vyntherapy.app"
+    },
+    "android": {
+      "package": "com.vyntherapy.app"
+    }
   }
 }
