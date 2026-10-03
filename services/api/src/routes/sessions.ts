@@ -11,17 +11,27 @@ const completeSchema = z.object({
   programId: z.number().int().positive(),
   durationSec: z.number().int().min(0).default(0),
   completedAt: z.string().datetime({ offset: true }).optional(),
+  rating: z.number().int().min(1).max(5).optional(),
+  feedback: z.string().max(2000).default(""),
 });
 
 sessionsRouter.post("/sessions/complete", async (req, res, next) => {
   try {
     const body = completeSchema.parse(req.body);
     const { rows } = await pool.query(
-      `INSERT INTO session_completions (user_id, program_id, duration_sec, completed_at)
-       VALUES ($1, $2, $3, COALESCE($4, now()))
+      `INSERT INTO session_completions (user_id, program_id, duration_sec, completed_at, rating, feedback)
+       VALUES ($1, $2, $3, COALESCE($4, now()), $5, $6)
        RETURNING id, user_id AS "userId", program_id AS "programId",
-                 duration_sec AS "durationSec", completed_at AS "completedAt"`,
-      [body.userId, body.programId, body.durationSec, body.completedAt ?? null],
+                 duration_sec AS "durationSec", completed_at AS "completedAt",
+                 rating, feedback`,
+      [
+        body.userId,
+        body.programId,
+        body.durationSec,
+        body.completedAt ?? null,
+        body.rating ?? null,
+        body.feedback,
+      ],
     );
     try {
       await evaluateMilestones(body.userId);

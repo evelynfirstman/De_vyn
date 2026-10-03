@@ -63,6 +63,77 @@ shopRouter.get("/shop/recommendations", async (req, res, next) => {
   }
 });
 
+/**
+ * Product page data (Phase 13): story + how-to guides (articles/videos
+ * sharing problem tags) + matching routines + related products.
+ * Reviews/FAQs arrive with real data — see docs/user-flows.md.
+ */
+shopRouter.get("/products/:sku", async (req, res, next) => {
+  try {
+    const sku = z.string().min(1).max(60).parse(req.params.sku);
+    const { rows } = await pool.query(
+      `SELECT id, sku, title, amount_minor AS "amountMinor", currency,
+              is_bundle AS "isBundle", problem_tags AS "problemTags",
+              created_at AS "createdAt"
+         FROM products WHERE sku = $1`,
+      [sku],
+    );
+    if (rows.length === 0) {
+      res.status(404).json({
+        error: { code: "PRODUCT_NOT_FOUND", message: "No such product" },
+      });
+      return;
+    }
+    const product = rows[0] as {
+      id: number;
+      problemTags: string[];
+      isBundle: boolean;
+    };
+    const [guides, routines, related, members] = await Promise.all([
+      pool.query(
+        `SELECT 'article' AS kind, id, slug, title FROM articles
+          WHERE tags && $1 LIMIT 3`,
+        [product.problemTags],
+      ),
+      pool.query(
+        `SELECT id, slug, title, duration_min FROM programs
+          WHERE problem_tags && $1 ORDER BY duration_min ASC LIMIT 3`,
+        [product.problemTags],
+      ),
+      pool.query(
+        `SELECT sku, title, amount_minor AS "amountMinor", currency
+           FROM products
+          WHERE sku <> $1 AND problem_tags && $2 LIMIT 4`,
+        [sku, product.problemTags],
+      ),
+      product.isBundle
+        ? pool.query(
+            `SELECT b.member_sku AS sku, p.title, b.qty
+               FROM bundle_items b LEFT JOIN products p ON p.sku = b.member_sku
+              WHERE b.bundle_product_id = $1`,
+            [product.id],
+          )
+        : Promise.resolve({ rows: [] }),
+    ]);
+    const videos = await pool.query(
+      `SELECT 'video' AS kind, id, slug, title FROM videos
+        WHERE tags && $1 LIMIT 3`,
+      [product.problemTags],
+    );
+    res.json({
+      data: {
+        ...rows[0],
+        guides: [...guides.rows, ...videos.rows],
+        routines: routines.rows,
+        related: related.rows,
+        members: members.rows,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 const checkoutSchema = z.object({
   userId: z.number().int().positive(),
   items: z

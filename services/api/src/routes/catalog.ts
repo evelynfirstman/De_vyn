@@ -59,7 +59,7 @@ catalogRouter.get("/programs", async (req, res, next) => {
     const [rows, count] = await Promise.all([
       pool.query(
         `SELECT id, slug, title, description, level, duration_min,
-                steps, problem_tags AS "problemTags", created_at AS "createdAt"
+                steps, equipment, problem_tags AS "problemTags", created_at AS "createdAt"
            FROM programs ${clause}
            ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
         [...params, pageSize, offset],
@@ -82,7 +82,7 @@ catalogRouter.get("/programs/:slug", async (req, res, next) => {
     const slug = z.string().min(1).max(120).parse(req.params.slug);
     const { rows } = await pool.query(
       `SELECT id, slug, title, description, level, duration_min,
-              steps, problem_tags AS "problemTags", created_at AS "createdAt"
+              steps, equipment, problem_tags AS "problemTags", created_at AS "createdAt"
          FROM programs WHERE slug = $1`,
       [slug],
     );

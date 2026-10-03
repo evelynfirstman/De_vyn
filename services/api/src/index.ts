@@ -24,6 +24,8 @@ import { adminCareRouter } from "./routes/adminCare";
 import { adminAnalyticsRouter } from "./routes/adminAnalytics";
 import { aiRouter } from "./routes/ai";
 import { growthRouter } from "./routes/growth";
+import { gamificationRouter } from "./routes/gamification";
+import { tipsRouter } from "./routes/tips";
 
 const app = express();
 
@@ -54,6 +56,8 @@ app.use("/v1", adminCareRouter);
 app.use("/v1", adminAnalyticsRouter);
 app.use("/v1", aiRouter);
 app.use("/v1", growthRouter);
+app.use("/v1", gamificationRouter);
+app.use("/v1", tipsRouter);
 app.use(notFound);
 app.use(errorHandler);
 

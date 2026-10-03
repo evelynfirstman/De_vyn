@@ -12,6 +12,9 @@ const profileSchema = z.object({
   equipment: z.array(z.string()).default([]),
   minutesPerSession: z.number().int().min(5).max(120).default(15),
   daysPerWeek: z.number().int().min(1).max(7).default(3),
+  occupation: z.string().max(120).default(""),
+  activityLevel: z.string().max(60).default(""),
+  productsOwned: z.array(z.string()).default([]),
 });
 
 const assessmentSchema = z.object({
@@ -31,14 +34,19 @@ journeyRouter.put("/profiles", async (req, res, next) => {
   try {
     const body = profileSchema.parse(req.body);
     const { rows } = await pool.query(
-      `INSERT INTO profiles (user_id, goals, pain_areas, equipment, minutes_per_session, days_per_week, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, now())
+      `INSERT INTO profiles (user_id, goals, pain_areas, equipment, minutes_per_session, days_per_week,
+                             occupation, activity_level, products_owned, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
        ON CONFLICT (user_id) DO UPDATE
          SET goals = $2, pain_areas = $3, equipment = $4,
-             minutes_per_session = $5, days_per_week = $6, updated_at = now()
+             minutes_per_session = $5, days_per_week = $6,
+             occupation = $7, activity_level = $8, products_owned = $9,
+             updated_at = now()
        RETURNING user_id AS "userId", goals, pain_areas AS "painAreas",
                  equipment, minutes_per_session AS "minutesPerSession",
-                 days_per_week AS "daysPerWeek", updated_at AS "updatedAt"`,
+                 days_per_week AS "daysPerWeek", occupation,
+                 activity_level AS "activityLevel",
+                 products_owned AS "productsOwned", updated_at AS "updatedAt"`,
       [
         body.userId,
         body.goals,
@@ -46,6 +54,9 @@ journeyRouter.put("/profiles", async (req, res, next) => {
         body.equipment,
         body.minutesPerSession,
         body.daysPerWeek,
+        body.occupation,
+        body.activityLevel,
+        body.productsOwned,
       ],
     );
     res.json({ data: rows[0] });
@@ -60,7 +71,9 @@ journeyRouter.get("/profiles/:userId", async (req, res, next) => {
     const { rows } = await pool.query(
       `SELECT user_id AS "userId", goals, pain_areas AS "painAreas",
               equipment, minutes_per_session AS "minutesPerSession",
-              days_per_week AS "daysPerWeek", updated_at AS "updatedAt"
+              days_per_week AS "daysPerWeek", occupation,
+              activity_level AS "activityLevel",
+              products_owned AS "productsOwned", updated_at AS "updatedAt"
          FROM profiles WHERE user_id = $1`,
       [userId],
     );

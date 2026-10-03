@@ -111,6 +111,21 @@ adminCareRouter.get("/admin/tickets", async (req, res, next) => {
   }
 });
 
+adminCareRouter.get("/tickets", async (req, res, next) => {
+  try {
+    const userId = z.coerce.number().int().positive().parse(req.query.userId);
+    const { rows } = await pool.query(
+      `SELECT id, user_id AS "userId", subject, message, status,
+              created_at AS "createdAt"
+         FROM support_tickets WHERE user_id = $1 ORDER BY created_at DESC`,
+      [userId],
+    );
+    res.json({ data: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
 adminCareRouter.post("/tickets", async (req, res, next) => {
   try {
     const body = z

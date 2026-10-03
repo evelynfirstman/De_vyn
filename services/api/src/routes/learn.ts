@@ -70,12 +70,13 @@ learnRouter.get("/videos/:slug", async (req, res, next) => {
 
 const bookmarkSchema = z.object({
   userId: z.number().int().positive(),
-  kind: z.enum(["article", "video"]),
+  kind: z.enum(["article", "video", "product"]),
   refId: z.number().int().positive(),
 });
 
-async function refExists(kind: "article" | "video", refId: number) {
-  const table = kind === "article" ? "articles" : "videos";
+async function refExists(kind: "article" | "video" | "product", refId: number) {
+  const table =
+    kind === "article" ? "articles" : kind === "video" ? "videos" : "products";
   const { rows } = await pool.query(`SELECT id FROM ${table} WHERE id = $1`, [
     refId,
   ]);
@@ -88,17 +89,23 @@ learnRouter.get("/bookmarks", async (req, res, next) => {
     const kind =
       req.query.kind === undefined
         ? undefined
-        : z.enum(["article", "video"]).parse(req.query.kind);
+        : z.enum(["article", "video", "product"]).parse(req.query.kind);
     const params: (number | string)[] = [userId];
     const clause =
       kind === undefined
-        ? "WHERE user_id = $1"
-        : "WHERE user_id = $1 AND kind = $2";
+        ? "WHERE b.user_id = $1"
+        : "WHERE b.user_id = $1 AND b.kind = $2";
     if (kind !== undefined) params.push(kind);
     const { rows } = await pool.query(
-      `SELECT id, user_id AS "userId", kind,
-              ref_id AS "refId", created_at AS "createdAt"
-         FROM bookmarks ${clause} ORDER BY created_at DESC`,
+      `SELECT b.id, b.user_id AS "userId", b.kind,
+              b.ref_id AS "refId", b.created_at AS "createdAt",
+              COALESCE(a.title, v.title, p.title) AS title,
+              COALESCE(a.slug, v.slug, p.sku) AS slug
+         FROM bookmarks b
+         LEFT JOIN articles a ON a.id = b.ref_id AND b.kind = 'article'
+         LEFT JOIN videos v ON v.id = b.ref_id AND b.kind = 'video'
+         LEFT JOIN products p ON p.id = b.ref_id AND b.kind = 'product'
+        ${clause} ORDER BY b.created_at DESC`,
       params,
     );
     res.json({ data: rows });
@@ -112,7 +119,7 @@ learnRouter.post("/bookmarks", async (req, res, next) => {
     const body = bookmarkSchema.parse(req.body);
     if (!(await refExists(body.kind, body.refId))) {
       res.status(404).json({
-        error: { code: "REF_NOT_FOUND", message: "No such article or video" },
+        error: { code: "REF_NOT_FOUND", message: "No such item" },
       });
       return;
     }

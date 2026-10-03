@@ -73,16 +73,60 @@ growthRouter.get("/entitlements", async (req, res, next) => {
   }
 });
 
+growthRouter.get("/users/:id/prefs", async (req, res, next) => {
+  try {
+    const userId = z.coerce.number().int().positive().parse(req.params.id);
+    const { rows } = await pool.query(
+      `SELECT user_id AS "userId", promos, reminders,
+              reminder_time AS "reminderTime"
+         FROM notification_prefs WHERE user_id = $1`,
+      [userId],
+    );
+    res.json({
+      data: rows[0] ?? {
+        userId,
+        promos: true,
+        reminders: true,
+        reminderTime: "08:00",
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 growthRouter.put("/users/:id/prefs", async (req, res, next) => {
   try {
     const userId = z.coerce.number().int().positive().parse(req.params.id);
-    const body = z.object({ promos: z.boolean() }).parse(req.body);
+    const body = z
+      .object({
+        promos: z.boolean().optional(),
+        reminders: z.boolean().optional(),
+        reminderTime: z
+          .string()
+          .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "HH:MM")
+          .optional(),
+      })
+      .parse(req.body);
+    const current = (
+      await pool.query(
+        "SELECT promos, reminders, reminder_time FROM notification_prefs WHERE user_id = $1",
+        [userId],
+      )
+    ).rows[0] as
+      | { promos: boolean; reminders: boolean; reminder_time: string }
+      | undefined;
+    const promos = body.promos ?? current?.promos ?? true;
+    const reminders = body.reminders ?? current?.reminders ?? true;
+    const reminderTime = body.reminderTime ?? current?.reminder_time ?? "08:00";
     const { rows } = await pool.query(
-      `INSERT INTO notification_prefs (user_id, promos, updated_at)
-       VALUES ($1, $2, now())
-       ON CONFLICT (user_id) DO UPDATE SET promos = $2, updated_at = now()
-       RETURNING user_id AS "userId", promos`,
-      [userId, body.promos],
+      `INSERT INTO notification_prefs (user_id, promos, reminders, reminder_time, updated_at)
+       VALUES ($1, $2, $3, $4, now())
+       ON CONFLICT (user_id) DO UPDATE
+         SET promos = $2, reminders = $3, reminder_time = $4, updated_at = now()
+       RETURNING user_id AS "userId", promos, reminders,
+                 reminder_time AS "reminderTime"`,
+      [userId, promos, reminders, reminderTime],
     );
     res.json({ data: rows[0] });
   } catch (err) {
