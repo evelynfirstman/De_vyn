@@ -12,7 +12,7 @@
     "@react-native-async-storage/async-storage": "1.23.1",
     "@vyn/tokens": "*",
     "expo": "^52.0.0",
-    "expo-asset": "~11.0.5",
+    "expo-asset": "^11.1.0",
     "react": "18.3.1",
     "react-native": "0.76.9",
     "react-native-web": "~0.19.13"
