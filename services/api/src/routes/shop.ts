@@ -338,6 +338,9 @@ shopRouter.get("/qr/resolve", async (req, res, next) => {
       return;
     }
     const { kind, ref } = rows[0] as { kind: string; ref: string };
+    await pool.query("UPDATE qr_codes SET scans = scans + 1 WHERE code = $1", [
+      code,
+    ]);
     const expected =
       "VYN1-" +
       createHmac("sha256", env.QR_SECRET)

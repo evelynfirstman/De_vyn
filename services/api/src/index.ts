@@ -18,6 +18,10 @@ import { notificationsRouter } from "./routes/notifications";
 import { accountRouter } from "./routes/account";
 import { progressRouter } from "./routes/progress";
 import { recommendationsRouter } from "./routes/recommendations";
+import { adminRouter } from "./routes/admin";
+import { adminShopRouter } from "./routes/adminShop";
+import { adminCareRouter } from "./routes/adminCare";
+import { adminAnalyticsRouter } from "./routes/adminAnalytics";
 
 const app = express();
 
@@ -42,6 +46,10 @@ app.use("/v1", notificationsRouter);
 app.use("/v1", accountRouter);
 app.use("/v1", progressRouter);
 app.use("/v1", recommendationsRouter);
+app.use("/v1", adminRouter);
+app.use("/v1", adminShopRouter);
+app.use("/v1", adminCareRouter);
+app.use("/v1", adminAnalyticsRouter);
 app.use(notFound);
 app.use(errorHandler);
 
