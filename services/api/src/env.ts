@@ -13,6 +13,13 @@ const schema = z.object({
   S3_SECRET_KEY: z.string().default("test"),
   S3_MEDIA_BUCKET: z.string().default("vyn-media"),
   S3_PRODUCTS_BUCKET: z.string().default("vyn-products"),
+  FLUTTERWAVE_PUBLIC_KEY: z.string().default(""),
+  FLUTTERWAVE_SECRET_KEY: z.string().default(""),
+  FLUTTERWAVE_LIVE: z.string().default("false"),
+  QR_SECRET: z.string().default("dev-qr-secret"),
+  WOO_URL: z.string().default(""),
+  WOO_CK: z.string().default(""),
+  WOO_CS: z.string().default(""),
 });
 
 export type Env = z.infer<typeof schema>;

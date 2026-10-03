@@ -3,6 +3,7 @@ node_modules/
 out/
 *.tsbuildinfo
 .env*.local
+.env
 .next-start*.log
 .expo-web*.log
 .expo/

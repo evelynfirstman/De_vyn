@@ -5,7 +5,7 @@ import { pageEnvelope, parsePagination } from "../pagination";
 
 export const catalogRouter = Router();
 
-type CatalogTable = "articles" | "products";
+type CatalogTable = "products";
 
 async function list(table: CatalogTable, page: number, pageSize: number) {
   const offset = (page - 1) * pageSize;
@@ -98,10 +98,66 @@ catalogRouter.get("/programs/:slug", async (req, res, next) => {
   }
 });
 
+const textFilterSchema = z.object({
+  q: z.string().min(1).optional(),
+  category: z.string().min(1).optional(),
+});
+
 catalogRouter.get("/articles", async (req, res, next) => {
   try {
     const { page, pageSize } = parsePagination(req.query);
-    res.json(await list("articles", page, pageSize));
+    const filters = textFilterSchema.parse(req.query);
+    const where: string[] = [];
+    const params: (string | number)[] = [];
+    if (filters.category !== undefined) {
+      params.push(filters.category);
+      where.push(`category = $${params.length}`);
+    }
+    if (filters.q !== undefined) {
+      params.push(`%${filters.q}%`);
+      where.push(
+        `(title ILIKE $${params.length} OR excerpt ILIKE $${params.length})`,
+      );
+    }
+    const clause = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+    const offset = (page - 1) * pageSize;
+    const [rows, count] = await Promise.all([
+      pool.query(
+        `SELECT id, slug, title, excerpt, body, category,
+                tags, created_at AS "createdAt"
+           FROM articles ${clause}
+           ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        [...params, pageSize, offset],
+      ),
+      pool.query(
+        `SELECT COUNT(*)::int AS total FROM articles ${clause}`,
+        params,
+      ),
+    ]);
+    res.json(
+      pageEnvelope(rows.rows, count.rows[0].total as number, page, pageSize),
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+catalogRouter.get("/articles/:slug", async (req, res, next) => {
+  try {
+    const slug = z.string().min(1).max(120).parse(req.params.slug);
+    const { rows } = await pool.query(
+      `SELECT id, slug, title, excerpt, body, category,
+              tags, created_at AS "createdAt"
+         FROM articles WHERE slug = $1`,
+      [slug],
+    );
+    if (rows.length === 0) {
+      res.status(404).json({
+        error: { code: "ARTICLE_NOT_FOUND", message: "No such article" },
+      });
+      return;
+    }
+    res.json({ data: rows[0] });
   } catch (err) {
     next(err);
   }

@@ -10,6 +10,9 @@ import { journeyRouter } from "./routes/journey";
 import { homeRouter } from "./routes/home";
 import { sessionsRouter } from "./routes/sessions";
 import { adminProgramsRouter } from "./routes/adminPrograms";
+import { learnRouter } from "./routes/learn";
+import { adminContentRouter } from "./routes/adminContent";
+import { shopRouter } from "./routes/shop";
 
 const app = express();
 
@@ -26,6 +29,9 @@ app.use("/v1", journeyRouter);
 app.use("/v1", homeRouter);
 app.use("/v1", sessionsRouter);
 app.use("/v1", adminProgramsRouter);
+app.use("/v1", learnRouter);
+app.use("/v1", adminContentRouter);
+app.use("/v1", shopRouter);
 app.use(notFound);
 app.use(errorHandler);
 

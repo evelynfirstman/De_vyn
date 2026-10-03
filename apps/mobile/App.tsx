@@ -15,7 +15,15 @@ const DEMO_USER_ID = 1;
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:4000";
 
 type Screen =
-  "profile" | "assessment" | "plan" | "home" | "recover" | "program";
+  | "profile"
+  | "assessment"
+  | "plan"
+  | "home"
+  | "recover"
+  | "program"
+  | "learn"
+  | "learnDetail"
+  | "shop";
 
 type PlanItem = {
   day: string;
@@ -43,6 +51,74 @@ type HomeData = {
   score: { score: number; band: string } | null;
   streak: { count: number; lastDate: string | null };
   checkIn: { soreness: number; sleepHours: string; stress: number } | null;
+};
+
+type LearnItem = {
+  kind: "article" | "video";
+  id: number;
+  slug: string;
+  title: string;
+  subtitle: string;
+  category: string;
+  matchedTags: string[];
+};
+
+type LearnListItem = {
+  id: number;
+  slug: string;
+  title: string;
+  sub: string;
+  category: string;
+};
+
+type LearnDetail =
+  | {
+      kind: "article";
+      id: number;
+      slug: string;
+      title: string;
+      excerpt: string;
+      body: string;
+      category: string;
+    }
+  | {
+      kind: "video";
+      id: number;
+      slug: string;
+      title: string;
+      description: string;
+      durationSec: number;
+      playbackUrl: string | null;
+      category: string;
+    };
+
+type Bookmark = {
+  id: number;
+  kind: "article" | "video";
+  refId: number;
+};
+
+type ShopRec = {
+  sku: string;
+  title: string;
+  amountMinor: number;
+  currency: string;
+  isBundle: boolean;
+  members: { sku: string; qty: number }[];
+  matchedTags: string[];
+  score: number;
+};
+
+type ShopOrder = {
+  id: number;
+  status: string;
+  amountMinor: number;
+  currency: string;
+  items: { sku: string; title: string; qty: number; unitMinor: number }[];
+  paymentStatus: string | null;
+  txRef: string | null;
+  fulfillmentStatus: string | null;
+  bridgeRef: string | null;
 };
 
 function todayStr(): string {
@@ -238,6 +314,21 @@ export default function App() {
   const [pendingCount, setPendingCount] = useState(0);
   const [doneMsg, setDoneMsg] = useState<string | null>(null);
 
+  const [learnTab, setLearnTab] = useState<"articles" | "videos">("articles");
+  const [learnItems, setLearnItems] = useState<LearnListItem[] | null>(null);
+  const [learnDetail, setLearnDetail] = useState<LearnDetail | null>(null);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const [related, setRelated] = useState<LearnItem[] | null>(null);
+  const [shopRecs, setShopRecs] = useState<ShopRec[] | null>(null);
+  const [shopOrders, setShopOrders] = useState<ShopOrder[] | null>(null);
+  const [qrInput, setQrInput] = useState("");
+  const [qrResult, setQrResult] = useState<string | null>(null);
+  const [buyMsg, setBuyMsg] = useState<string | null>(null);
+
+  function isBookmarked(kind: "article" | "video", refId: number): boolean {
+    return bookmarks.some((b) => b.kind === kind && b.refId === refId);
+  }
+
   const toggle = (list: string[], v: string, set: (l: string[]) => void) =>
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
@@ -331,6 +422,22 @@ export default function App() {
     }
   }
 
+  async function delJson(path: string, body: unknown) {
+    const res = await fetch(`${API_URL}${path}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 204) return null;
+    const json = (await res.json()) as {
+      data?: unknown;
+      error?: { message: string };
+    };
+    if (!res.ok)
+      throw new Error(json.error?.message ?? `Request failed (${res.status})`);
+    return json.data;
+  }
+
   async function refreshPending() {
     setPendingCount((await readQueue()).length);
   }
@@ -418,9 +525,189 @@ export default function App() {
     }
   }, [screen, programs, busy]);
 
+  async function loadLearnScreen(tab: "articles" | "videos") {
+    setBusy(true);
+    setError(null);
+    try {
+      const [itemsRes, relatedRes, bookmarkRes] = await Promise.all([
+        getJson(`/v1/${tab}?pageSize=50`) as Promise<{
+          data: {
+            id: number;
+            slug: string;
+            title: string;
+            excerpt?: string;
+            description?: string;
+            category: string;
+          }[];
+        }>,
+        getJson(`/v1/learn/related?userId=${DEMO_USER_ID}`) as Promise<{
+          data: LearnItem[];
+        }>,
+        getJson(`/v1/bookmarks?userId=${DEMO_USER_ID}`) as Promise<{
+          data: Bookmark[];
+        }>,
+      ]);
+      setLearnItems(
+        itemsRes.data.map((r) => ({
+          id: r.id,
+          slug: r.slug,
+          title: r.title,
+          sub: r.excerpt ?? r.description ?? "",
+          category: r.category,
+        })),
+      );
+      setLearnTab(tab);
+      setRelated(relatedRes.data);
+      setBookmarks(bookmarkRes.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Load failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openLearnDetail(kind: "article" | "video", slug: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      if (kind === "article") {
+        const data = (await getJson(`/v1/articles/${slug}`)) as {
+          id: number;
+          slug: string;
+          title: string;
+          excerpt: string;
+          body: string;
+          category: string;
+        };
+        setLearnDetail({ kind, ...data });
+      } else {
+        const data = (await getJson(`/v1/videos/${slug}`)) as {
+          id: number;
+          slug: string;
+          title: string;
+          description: string;
+          durationSec: number;
+          playbackUrl: string | null;
+          category: string;
+        };
+        setLearnDetail({ kind, ...data });
+      }
+      setScreen("learnDetail");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Load failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function toggleBookmark(kind: "article" | "video", refId: number) {
+    setError(null);
+    try {
+      if (isBookmarked(kind, refId)) {
+        await delJson("/v1/bookmarks", { userId: DEMO_USER_ID, kind, refId });
+      } else {
+        await postJson("/v1/bookmarks", { userId: DEMO_USER_ID, kind, refId });
+      }
+      const data = (await getJson(`/v1/bookmarks?userId=${DEMO_USER_ID}`)) as {
+        data: Bookmark[];
+      };
+      setBookmarks(data.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Bookmark failed");
+    }
+  }
+
+  async function loadShopScreen() {
+    setBusy(true);
+    setError(null);
+    try {
+      const [recs, orders] = await Promise.all([
+        getJson(`/v1/shop/recommendations?userId=${DEMO_USER_ID}`) as Promise<{
+          data: ShopRec[];
+        }>,
+        getJson(`/v1/shop/orders?userId=${DEMO_USER_ID}`) as Promise<{
+          data: ShopOrder[];
+        }>,
+      ]);
+      setShopRecs(recs.data);
+      setShopOrders(orders.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Load failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function buy(sku: string) {
+    setBusy(true);
+    setError(null);
+    setBuyMsg(null);
+    try {
+      const data = (await postJson("/v1/shop/checkout", {
+        userId: DEMO_USER_ID,
+        items: [{ sku, qty: 1 }],
+        shipping: {},
+      })) as {
+        order: { id: number };
+        payment: { txRef: string; paymentUrl: string | null };
+      };
+      setBuyMsg(
+        `Order #${data.order.id} created · ${data.payment.txRef}` +
+          (data.payment.paymentUrl
+            ? " · complete payment in the link sent to you"
+            : " · test mode: no live payment link"),
+      );
+      const orders = (await getJson(
+        `/v1/shop/orders?userId=${DEMO_USER_ID}`,
+      )) as { data: ShopOrder[] };
+      setShopOrders(orders.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Checkout failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitQr() {
+    setError(null);
+    setQrResult(null);
+    try {
+      const data = (await getJson(
+        `/v1/qr/resolve?code=${encodeURIComponent(qrInput.trim())}`,
+      )) as { kind: string; ref: string; path: string };
+      if (data.kind === "program") {
+        await openProgram(data.ref);
+      } else {
+        setQrResult(`Product: ${data.ref}`);
+      }
+    } catch {
+      setQrResult("Code not recognized");
+    }
+  }
+
   useEffect(() => {
     void refreshPending();
   }, []);
+
+  useEffect(() => {
+    if (
+      screen === "learn" &&
+      (learnItems === null || related === null) &&
+      !busy
+    ) {
+      void loadLearnScreen(learnTab);
+    }
+  }, [screen]);
+
+  useEffect(() => {
+    if (
+      screen === "shop" &&
+      (shopRecs === null || shopOrders === null) &&
+      !busy
+    ) {
+      void loadShopScreen();
+    }
+  }, [screen]);
 
   useEffect(() => {
     if (!timerOn || selectedProgram === null) return;
@@ -453,7 +740,13 @@ export default function App() {
                 ? "Home · Daily check-in"
                 : screen === "recover"
                   ? "Recover · Programs"
-                  : "Recover · Guided session"}
+                  : screen === "program"
+                    ? "Recover · Guided session"
+                    : screen === "learn"
+                      ? "Learn · Library"
+                      : screen === "learnDetail"
+                        ? "Learn · Detail"
+                        : "Shop · Problem-first"}
       </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -661,6 +954,15 @@ export default function App() {
           >
             <Text style={styles.secondaryText}>Browse programs</Text>
           </Pressable>
+          <Pressable
+            style={styles.secondary}
+            onPress={() => setScreen("learn")}
+          >
+            <Text style={styles.secondaryText}>Learn</Text>
+          </Pressable>
+          <Pressable style={styles.secondary} onPress={() => setScreen("shop")}>
+            <Text style={styles.secondaryText}>Shop</Text>
+          </Pressable>
         </View>
       )}
 
@@ -746,6 +1048,190 @@ export default function App() {
             }}
           >
             <Text style={styles.secondaryText}>All programs</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {screen === "learn" && (
+        <View>
+          <Text style={styles.label}>For you</Text>
+          {(related ?? []).slice(0, 3).map((r) => (
+            <Pressable
+              key={`${r.kind}-${r.slug}`}
+              style={styles.card}
+              onPress={() => {
+                void openLearnDetail(r.kind, r.slug);
+              }}
+            >
+              <Text style={styles.cardDay}>
+                {r.kind} · {r.matchedTags.join(", ") || "general"}
+              </Text>
+              <Text style={styles.cardTitle}>{r.title}</Text>
+              <Text style={styles.cardSub}>{r.subtitle}</Text>
+            </Pressable>
+          ))}
+          <Text style={styles.label}>Library</Text>
+          <View style={styles.chips}>
+            <Chip
+              label="Articles"
+              selected={learnTab === "articles"}
+              onToggle={() => {
+                setLearnItems(null);
+                void loadLearnScreen("articles");
+              }}
+            />
+            <Chip
+              label="Videos"
+              selected={learnTab === "videos"}
+              onToggle={() => {
+                setLearnItems(null);
+                void loadLearnScreen("videos");
+              }}
+            />
+          </View>
+          {(learnItems ?? []).map((item) => (
+            <View key={item.slug} style={styles.card}>
+              <Pressable
+                onPress={() => {
+                  void openLearnDetail(
+                    learnTab === "articles" ? "article" : "video",
+                    item.slug,
+                  );
+                }}
+              >
+                <Text style={styles.cardDay}>{item.category}</Text>
+                <Text style={styles.cardTitle}>{item.title}</Text>
+                <Text style={styles.cardSub}>{item.sub}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  void toggleBookmark(
+                    learnTab === "articles" ? "article" : "video",
+                    item.id,
+                  );
+                }}
+              >
+                <Text style={styles.bookmark}>
+                  {isBookmarked(
+                    learnTab === "articles" ? "article" : "video",
+                    item.id,
+                  )
+                    ? "★ Saved"
+                    : "☆ Save"}
+                </Text>
+              </Pressable>
+            </View>
+          ))}
+          <Pressable style={styles.secondary} onPress={() => setScreen("home")}>
+            <Text style={styles.secondaryText}>Back to Home</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {screen === "learnDetail" && learnDetail && (
+        <View>
+          <Text style={styles.cardDay}>{learnDetail.category}</Text>
+          <Text style={styles.label}>{learnDetail.title}</Text>
+          {learnDetail.kind === "article" ? (
+            <Text style={styles.cardSub}>
+              {learnDetail.body || learnDetail.excerpt}
+            </Text>
+          ) : (
+            <Text style={styles.cardSub}>
+              {learnDetail.playbackUrl ??
+                "Video coming soon — media library in progress."}
+            </Text>
+          )}
+          <Pressable
+            onPress={() => {
+              void toggleBookmark(learnDetail.kind, learnDetail.id);
+            }}
+          >
+            <Text style={styles.bookmark}>
+              {isBookmarked(learnDetail.kind, learnDetail.id)
+                ? "★ Saved"
+                : "☆ Save"}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={styles.secondary}
+            onPress={() => setScreen("learn")}
+          >
+            <Text style={styles.secondaryText}>Back to Learn</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {screen === "shop" && (
+        <View>
+          <Text style={styles.label}>Recommended for you</Text>
+          {(shopRecs ?? []).map((r) => (
+            <View key={r.sku} style={styles.card}>
+              <Text style={styles.cardDay}>
+                {r.isBundle ? "Bundle" : "Product"}
+                {r.matchedTags.length > 0
+                  ? ` · for ${r.matchedTags.join(", ")}`
+                  : ""}
+              </Text>
+              <Text style={styles.cardTitle}>{r.title}</Text>
+              <Text style={styles.cardSub}>
+                {r.currency === "NGN" ? "₦" : `${r.currency} `}
+                {(r.amountMinor / 100).toLocaleString()}
+                {r.isBundle && r.members.length > 0
+                  ? ` · ${r.members.length} items`
+                  : ""}
+              </Text>
+              <Pressable
+                style={styles.primary}
+                onPress={() => {
+                  void buy(r.sku);
+                }}
+                disabled={busy}
+              >
+                <Text style={styles.primaryText}>Buy</Text>
+              </Pressable>
+            </View>
+          ))}
+          {buyMsg ? <Text style={styles.doneMsg}>{buyMsg}</Text> : null}
+
+          <Text style={styles.label}>My orders</Text>
+          {(shopOrders ?? []).map((o) => (
+            <View key={o.id} style={styles.card}>
+              <Text style={styles.cardDay}>
+                #{o.id} · {o.status} · pay {o.paymentStatus ?? "?"} · ship{" "}
+                {o.fulfillmentStatus ?? "—"}
+              </Text>
+              <Text style={styles.cardTitle}>
+                {o.currency === "NGN" ? "₦" : `${o.currency} `}
+                {(o.amountMinor / 100).toLocaleString()}
+              </Text>
+              <Text style={styles.cardSub}>
+                {o.items.map((i) => `${i.title} ×${i.qty}`).join(" · ")}
+              </Text>
+              {o.txRef ? <Text style={styles.cardSub}>{o.txRef}</Text> : null}
+            </View>
+          ))}
+
+          <Text style={styles.label}>QR code (enter manually)</Text>
+          <TextInput
+            style={styles.input}
+            value={qrInput}
+            onChangeText={setQrInput}
+            placeholder="e.g. VYN1-XXXXXXXXXXXX"
+            placeholderTextColor={colors.ink[500]}
+          />
+          <Pressable
+            style={styles.primary}
+            onPress={() => {
+              void submitQr();
+            }}
+          >
+            <Text style={styles.primaryText}>Resolve</Text>
+          </Pressable>
+          {qrResult ? <Text style={styles.doneMsg}>{qrResult}</Text> : null}
+
+          <Pressable style={styles.secondary} onPress={() => setScreen("home")}>
+            <Text style={styles.secondaryText}>Back to Home</Text>
           </Pressable>
         </View>
       )}
@@ -866,4 +1352,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   doneMsg: { fontSize: 14, fontWeight: "700", marginTop: 12 },
+  bookmark: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.brand[700],
+    marginTop: 8,
+  },
 });
