@@ -22,6 +22,8 @@ import { adminRouter } from "./routes/admin";
 import { adminShopRouter } from "./routes/adminShop";
 import { adminCareRouter } from "./routes/adminCare";
 import { adminAnalyticsRouter } from "./routes/adminAnalytics";
+import { aiRouter } from "./routes/ai";
+import { growthRouter } from "./routes/growth";
 
 const app = express();
 
@@ -50,6 +52,8 @@ app.use("/v1", adminRouter);
 app.use("/v1", adminShopRouter);
 app.use("/v1", adminCareRouter);
 app.use("/v1", adminAnalyticsRouter);
+app.use("/v1", aiRouter);
+app.use("/v1", growthRouter);
 app.use(notFound);
 app.use(errorHandler);
 

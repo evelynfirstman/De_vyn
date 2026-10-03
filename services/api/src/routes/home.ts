@@ -3,8 +3,9 @@ import { z } from "zod";
 import { pool } from "../db";
 import { redis } from "../redis";
 import { logger } from "../logger";
-import { computeScoreV1 } from "../score";
+import { computeScore } from "../score";
 import { evaluateMilestones } from "../milestones";
+import { activeWeights } from "./ai";
 import {
   dayBefore,
   displayStreak,
@@ -122,12 +123,19 @@ homeRouter.post("/check-ins", async (req, res, next) => {
     ).rows[0];
 
     const completions = await countCompletionsLast7Days(body.userId, body.date);
-    const result = computeScoreV1({
-      soreness: body.soreness,
-      sleepHours: body.sleepHours,
-      stress: body.stress,
-      completionsLast7Days: completions,
-    });
+    const prev = await readStreak(body.userId, body.date);
+    const streak = nextStreak(prev, body.date);
+    const { version, weights } = await activeWeights();
+    const result = computeScore(
+      {
+        soreness: body.soreness,
+        sleepHours: body.sleepHours,
+        stress: body.stress,
+        completionsLast7Days: completions,
+      },
+      weights,
+      streak.count,
+    );
 
     const score = (
       await pool.query(
@@ -147,18 +155,19 @@ homeRouter.post("/check-ins", async (req, res, next) => {
             sleepHours: body.sleepHours,
             stress: body.stress,
             completionsLast7Days: completions,
+            version,
             breakdown: result.breakdown,
           }),
         ],
       )
     ).rows[0];
 
-    const prev = await readStreak(body.userId, body.date);
-    const streak = nextStreak(prev, body.date);
     await writeStreak(body.userId, streak);
     const milestones = await evaluateMilestones(body.userId);
 
-    res.status(201).json({ data: { checkIn, score, streak, milestones } });
+    res
+      .status(201)
+      .json({ data: { checkIn, score, streak, milestones, version } });
   } catch (err) {
     next(err);
   }

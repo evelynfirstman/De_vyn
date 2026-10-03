@@ -152,6 +152,32 @@ type Rec = {
   action: { screen: string; slug?: string };
 };
 
+type Explanation = {
+  summary: string;
+  reasons: string[];
+  sources: { title: string; source: string }[];
+  disclaimer: string;
+  escalation: string;
+};
+
+type SubPlan = {
+  id: number;
+  name: string;
+  amountMinor: number;
+  currency: string;
+  interval: string;
+};
+
+type Entitlement = {
+  premium: boolean;
+  subscription: { planName: string; status: string } | null;
+};
+
+type ReferralInfo = {
+  mine: { code: string; status: string }[];
+  referredBy: { code: string }[];
+};
+
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -355,6 +381,14 @@ export default function App() {
   const [qrInput, setQrInput] = useState("");
   const [qrResult, setQrResult] = useState<string | null>(null);
   const [buyMsg, setBuyMsg] = useState<string | null>(null);
+
+  const [explanation, setExplanation] = useState<Explanation | null>(null);
+  const [subPlans, setSubPlans] = useState<SubPlan[] | null>(null);
+  const [entitlement, setEntitlement] = useState<Entitlement | null>(null);
+  const [referral, setReferral] = useState<ReferralInfo | null>(null);
+  const [redeemInput, setRedeemInput] = useState("");
+  const [redeemMsg, setRedeemMsg] = useState<string | null>(null);
+  const [promos, setPromos] = useState(true);
 
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [recs, setRecs] = useState<Rec[] | null>(null);
@@ -852,7 +886,98 @@ export default function App() {
     ) {
       void loadProgressScreen();
     }
+    if (screen === "account" && subPlans === null && !busy) {
+      void loadAccountExtras();
+    }
   }, [screen]);
+
+  async function loadExplanation(planId: number) {
+    setError(null);
+    try {
+      const data = (await getJson(
+        `/v1/plans/${planId}/explanation`,
+      )) as Explanation;
+      setExplanation(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Load failed");
+    }
+  }
+
+  async function loadAccountExtras() {
+    setError(null);
+    try {
+      const [plansRes, entRes, refRes] = await Promise.all([
+        getJson("/v1/subscriptions/plans") as Promise<{ data: SubPlan[] }>,
+        getJson(`/v1/entitlements?userId=${DEMO_USER_ID}`) as Promise<{
+          data: Entitlement;
+        }>,
+        getJson(`/v1/referrals?userId=${DEMO_USER_ID}`) as Promise<{
+          data: ReferralInfo;
+        }>,
+      ]);
+      setSubPlans(plansRes.data);
+      setEntitlement(entRes.data);
+      setReferral(refRes.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Load failed");
+    }
+  }
+
+  async function subscribe(planId: number) {
+    setError(null);
+    try {
+      await postJson("/v1/subscriptions/checkout", {
+        userId: DEMO_USER_ID,
+        planId,
+      });
+      const ent = (await getJson(
+        `/v1/entitlements?userId=${DEMO_USER_ID}`,
+      )) as {
+        data: Entitlement;
+      };
+      setEntitlement(ent.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Subscribe failed");
+    }
+  }
+
+  async function ensureReferralCode() {
+    setError(null);
+    try {
+      await postJson("/v1/referrals", { userId: DEMO_USER_ID });
+      const ref = (await getJson(`/v1/referrals?userId=${DEMO_USER_ID}`)) as {
+        data: ReferralInfo;
+      };
+      setReferral(ref.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Referral failed");
+    }
+  }
+
+  async function redeemReferral() {
+    setError(null);
+    setRedeemMsg(null);
+    try {
+      await postJson("/v1/referrals/redeem", {
+        code: redeemInput.trim(),
+        userId: DEMO_USER_ID,
+      });
+      setRedeemMsg("Code redeemed ✓ — thanks for spreading recovery");
+      setRedeemInput("");
+    } catch (e) {
+      setRedeemMsg(e instanceof Error ? e.message : "Redeem failed");
+    }
+  }
+
+  async function togglePromos() {
+    setError(null);
+    try {
+      await putJson(`/v1/users/${DEMO_USER_ID}/prefs`, { promos: !promos });
+      setPromos(!promos);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Update failed");
+    }
+  }
 
   useEffect(() => {
     void refreshPending();
@@ -1023,6 +1148,32 @@ export default function App() {
             </View>
           ))}
           <Text style={styles.rationale}>{plan.rationale}</Text>
+          {explanation ? (
+            <View style={styles.card}>
+              <Text style={styles.cardDay}>Why this plan</Text>
+              <Text style={styles.cardSub}>{explanation.summary}</Text>
+              {explanation.reasons.map((r) => (
+                <Text key={r} style={styles.cardSub}>
+                  • {r}
+                </Text>
+              ))}
+              {explanation.sources.map((s) => (
+                <Text key={s.title} style={styles.cardSub}>
+                  📖 {s.title} ({s.source})
+                </Text>
+              ))}
+              <Text style={styles.cardSub}>{explanation.disclaimer}</Text>
+            </View>
+          ) : (
+            <Pressable
+              style={styles.secondary}
+              onPress={() => {
+                void loadExplanation(plan.id);
+              }}
+            >
+              <Text style={styles.secondaryText}>Why this plan?</Text>
+            </Pressable>
+          )}
           <Pressable style={styles.primary} onPress={openHome} disabled={busy}>
             <Text style={styles.primaryText}>
               {busy ? "Loading…" : "Open Home"}
@@ -1542,7 +1693,93 @@ export default function App() {
             </View>
           ))}
 
+          <Text style={styles.label}>Premium</Text>
+          {entitlement?.premium ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>
+                ★ Premium · {entitlement.subscription?.planName}
+              </Text>
+            </View>
+          ) : (
+            <View>
+              {(subPlans ?? []).map((p) => (
+                <View key={p.id} style={styles.card}>
+                  <Text style={styles.cardTitle}>{p.name}</Text>
+                  <Text style={styles.cardSub}>
+                    {p.currency === "NGN" ? "₦" : `${p.currency} `}
+                    {(p.amountMinor / 100).toLocaleString()}/{p.interval}
+                  </Text>
+                  <Pressable
+                    style={styles.primary}
+                    onPress={() => {
+                      void subscribe(p.id);
+                    }}
+                  >
+                    <Text style={styles.primaryText}>Subscribe</Text>
+                  </Pressable>
+                </View>
+              ))}
+              {subPlans === null ? (
+                <Pressable
+                  style={styles.secondary}
+                  onPress={() => {
+                    void loadAccountExtras();
+                  }}
+                >
+                  <Text style={styles.secondaryText}>Load plans</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          )}
+
+          <Text style={styles.label}>Referrals</Text>
+          {referral && referral.mine.length > 0 ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>
+                Your code: {referral.mine[0].code}
+              </Text>
+              <Text style={styles.cardSub}>
+                Status: {referral.mine[0].status}
+              </Text>
+            </View>
+          ) : (
+            <Pressable
+              style={styles.secondary}
+              onPress={() => {
+                void ensureReferralCode();
+              }}
+            >
+              <Text style={styles.secondaryText}>Get my referral code</Text>
+            </Pressable>
+          )}
+          <TextInput
+            style={styles.input}
+            value={redeemInput}
+            onChangeText={setRedeemInput}
+            placeholder="Redeem a friend's code"
+            placeholderTextColor={colors.ink[500]}
+          />
+          <Pressable
+            style={styles.primary}
+            onPress={() => {
+              void redeemReferral();
+            }}
+          >
+            <Text style={styles.primaryText}>Redeem</Text>
+          </Pressable>
+          {redeemMsg ? <Text style={styles.doneMsg}>{redeemMsg}</Text> : null}
+
           <Text style={styles.label}>Settings</Text>
+          <Pressable
+            style={styles.secondary}
+            onPress={() => {
+              void togglePromos();
+            }}
+          >
+            <Text style={styles.secondaryText}>
+              Promos: {promos ? "ON (tap to mute)" : "OFF (tap to unmute)"}
+            </Text>
+          </Pressable>
           <Pressable
             style={styles.secondary}
             onPress={() => {

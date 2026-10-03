@@ -230,9 +230,23 @@ shopRouter.post("/shop/payments/webhook", async (req, res, next) => {
       [txRef],
     );
     if (found.rows.length === 0) {
-      res.status(404).json({
-        error: { code: "PAYMENT_NOT_FOUND", message: "Unknown tx_ref" },
-      });
+      // Maybe a subscription charge: activate on tx_ref match.
+      const sub = await pool.query(
+        "SELECT id, status FROM subscriptions WHERE tx_ref = $1",
+        [txRef],
+      );
+      if (sub.rows.length === 0) {
+        res.status(404).json({
+          error: { code: "PAYMENT_NOT_FOUND", message: "Unknown tx_ref" },
+        });
+        return;
+      }
+      await pool.query(
+        `UPDATE subscriptions SET status = 'active', started_at = COALESCE(started_at, now())
+          WHERE id = $1`,
+        [(sub.rows[0] as { id: number }).id],
+      );
+      res.json({ received: true, acted: true, subscription: true });
       return;
     }
     const payment = found.rows[0] as {

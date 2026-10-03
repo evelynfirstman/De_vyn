@@ -1,0 +1,67 @@
+/**
+ * Plan explanation builder (Phase 10).
+ *
+ * Pure function so the guardrail eval set (explain.test.ts) can verify:
+ * every explanation cites its sources, carries the medical disclaimer,
+ * offers human escalation, and never contains diagnosis language.
+ */
+export type ExplanationSource = {
+  title: string;
+  source: string;
+};
+
+export type PlanExplanation = {
+  summary: string;
+  reasons: string[];
+  sources: ExplanationSource[];
+  disclaimer: string;
+  escalation: string;
+};
+
+export const EXPLANATION_DISCLAIMER =
+  "General wellness information only — not a medical diagnosis. " +
+  "Stop and consult a professional if you feel sharp pain, numbness, or dizziness.";
+
+const BANNED_PHRASES = [
+  "you have",
+  "you suffer from",
+  "diagnos",
+  "herniat",
+  "fracture",
+];
+
+export function buildExplanation(args: {
+  itemCount: number;
+  painAreas: string[];
+  docs: ExplanationSource[];
+}): PlanExplanation {
+  const pains =
+    args.painAreas.length > 0 ? args.painAreas.join(", ") : "general recovery";
+  return {
+    summary:
+      `Your plan has ${args.itemCount} session(s) this week, ` +
+      `matched to ${pains} from your profile and latest assessment.`,
+    reasons: [
+      `Sessions per week come from the days you said you can train.`,
+      `Session length respects the minutes-per-session cap in your profile.`,
+      `Programs are ordered longest-fitting first for recovery value per session.`,
+    ],
+    sources: args.docs,
+    disclaimer: EXPLANATION_DISCLAIMER,
+    escalation:
+      "Questions? Open a support ticket from your profile and a human will review your plan.",
+  };
+}
+
+export function explanationViolations(exp: PlanExplanation): string[] {
+  const haystack = `${exp.summary} ${exp.reasons.join(" ")}`.toLowerCase();
+  const found = BANNED_PHRASES.filter((p) => haystack.includes(p));
+  const problems: string[] = found.map((p) => `banned phrase: ${p}`);
+  if (!exp.disclaimer || exp.disclaimer.length < 20) {
+    problems.push("missing disclaimer");
+  }
+  if (!exp.escalation || exp.escalation.length < 10) {
+    problems.push("missing escalation");
+  }
+  return problems;
+}
