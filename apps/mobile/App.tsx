@@ -1608,7 +1608,7 @@ export default function App() {
   return (
     <AppErrorBoundary>
       <View style={styles.shell}>
-        <ScrollView contentContainerStyle={styles.page}>
+        <ScrollView contentContainerStyle={styles.page} style={styles.scroller}>
           <Text style={styles.title}>Vyn Therapy</Text>
           <Text style={styles.step}>{STEP_TITLES[screen]}</Text>
 
@@ -3170,6 +3170,7 @@ const styles = StyleSheet.create({
   goalDone: { textDecorationLine: "line-through", color: colors.ink[500] },
   goalDelete: { fontSize: 16, color: colors.danger, padding: 4 },
   shell: { flex: 1, backgroundColor: colors.ink[50] },
+  scroller: { flex: 1 },
   centerWrap: { alignItems: "center", paddingVertical: 60 },
   splashLogo: { fontSize: 64, fontWeight: "800", color: colors.brand[700] },
   header: {
@@ -3186,7 +3187,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderTopWidth: 1,
     borderTopColor: colors.ink[100],
-    paddingVertical: 6,
+    paddingTop: 6,
+    paddingBottom: 16,
+    minHeight: 64,
   },
   tab: { flex: 1, alignItems: "center" },
   tabIcon: { fontSize: 20 },
