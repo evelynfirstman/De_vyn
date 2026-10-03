@@ -4,6 +4,7 @@ import { pool } from "../db";
 import { redis } from "../redis";
 import { logger } from "../logger";
 import { computeScoreV1 } from "../score";
+import { evaluateMilestones } from "../milestones";
 import {
   dayBefore,
   displayStreak,
@@ -70,7 +71,7 @@ async function rebuildStreak(
   return { count, lastDate: dates[0] };
 }
 
-async function readStreak(
+export async function readStreak(
   userId: number,
   today: string,
 ): Promise<StreakState | null> {
@@ -155,8 +156,9 @@ homeRouter.post("/check-ins", async (req, res, next) => {
     const prev = await readStreak(body.userId, body.date);
     const streak = nextStreak(prev, body.date);
     await writeStreak(body.userId, streak);
+    const milestones = await evaluateMilestones(body.userId);
 
-    res.status(201).json({ data: { checkIn, score, streak } });
+    res.status(201).json({ data: { checkIn, score, streak, milestones } });
   } catch (err) {
     next(err);
   }

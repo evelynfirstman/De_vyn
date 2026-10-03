@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db";
+import { logger } from "../logger";
+import { evaluateMilestones } from "../milestones";
 
 export const sessionsRouter = Router();
 
@@ -21,6 +23,11 @@ sessionsRouter.post("/sessions/complete", async (req, res, next) => {
                  duration_sec AS "durationSec", completed_at AS "completedAt"`,
       [body.userId, body.programId, body.durationSec, body.completedAt ?? null],
     );
+    try {
+      await evaluateMilestones(body.userId);
+    } catch (err) {
+      logger.warn({ err }, "milestone eval failed after completion");
+    }
     res.status(201).json({ data: rows[0] });
   } catch (err) {
     next(err);

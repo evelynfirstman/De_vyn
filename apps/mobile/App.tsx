@@ -23,7 +23,9 @@ type Screen =
   | "program"
   | "learn"
   | "learnDetail"
-  | "shop";
+  | "shop"
+  | "progress"
+  | "account";
 
 type PlanItem = {
   day: string;
@@ -119,6 +121,35 @@ type ShopOrder = {
   txRef: string | null;
   fulfillmentStatus: string | null;
   bridgeRef: string | null;
+};
+
+type Goal = {
+  id: number;
+  title: string;
+  targetPerWeek: number;
+  done: boolean;
+};
+
+type NotificationItem = {
+  id: number;
+  kind: string;
+  title: string;
+  body: string;
+  read: boolean;
+};
+
+type ProgressData = {
+  scores: { date: string; score: number; band: string }[];
+  completionsByDay: { date: string; count: number }[];
+  streak: { count: number; lastDate: string | null };
+  milestones: { kind: string; label: string; achievedAt: string }[];
+};
+
+type Rec = {
+  kind: string;
+  title: string;
+  reason: string;
+  action: { screen: string; slug?: string };
 };
 
 function todayStr(): string {
@@ -324,6 +355,15 @@ export default function App() {
   const [qrInput, setQrInput] = useState("");
   const [qrResult, setQrResult] = useState<string | null>(null);
   const [buyMsg, setBuyMsg] = useState<string | null>(null);
+
+  const [progress, setProgress] = useState<ProgressData | null>(null);
+  const [recs, setRecs] = useState<Rec[] | null>(null);
+  const [goalList, setGoalList] = useState<Goal[] | null>(null);
+  const [newGoal, setNewGoal] = useState("");
+  const [notifications, setNotifications] = useState<NotificationItem[] | null>(
+    null,
+  );
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   function isBookmarked(kind: "article" | "video", refId: number): boolean {
     return bookmarks.some((b) => b.kind === kind && b.refId === refId);
@@ -685,6 +725,135 @@ export default function App() {
     }
   }
 
+  async function loadProgressScreen() {
+    setBusy(true);
+    setError(null);
+    try {
+      const [progressRes, recsRes, goalsRes, notifRes, ordersRes] =
+        await Promise.all([
+          getJson(`/v1/progress?userId=${DEMO_USER_ID}`) as Promise<{
+            data: ProgressData;
+          }>,
+          getJson(`/v1/recommendations?userId=${DEMO_USER_ID}`) as Promise<{
+            data: Rec[];
+          }>,
+          getJson(`/v1/goals?userId=${DEMO_USER_ID}`) as Promise<{
+            data: Goal[];
+          }>,
+          getJson(`/v1/notifications?userId=${DEMO_USER_ID}`) as Promise<{
+            data: NotificationItem[];
+          }>,
+          getJson(`/v1/shop/orders?userId=${DEMO_USER_ID}`) as Promise<{
+            data: ShopOrder[];
+          }>,
+        ]);
+      setProgress(progressRes.data);
+      setRecs(recsRes.data);
+      setGoalList(goalsRes.data);
+      setNotifications(notifRes.data);
+      setShopOrders(ordersRes.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Load failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function addGoal() {
+    const title = newGoal.trim();
+    if (!title) return;
+    setError(null);
+    try {
+      await postJson("/v1/goals", { userId: DEMO_USER_ID, title });
+      setNewGoal("");
+      const data = (await getJson(`/v1/goals?userId=${DEMO_USER_ID}`)) as {
+        data: Goal[];
+      };
+      setGoalList(data.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Add failed");
+    }
+  }
+
+  async function toggleGoal(goal: Goal) {
+    setError(null);
+    try {
+      await putJson(`/v1/goals/${goal.id}`, {
+        userId: DEMO_USER_ID,
+        done: !goal.done,
+      });
+      setGoalList((prev) =>
+        prev === null
+          ? prev
+          : prev.map((g) => (g.id === goal.id ? { ...g, done: !g.done } : g)),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Update failed");
+    }
+  }
+
+  async function removeGoal(id: number) {
+    setError(null);
+    try {
+      await delJson(`/v1/goals/${id}?userId=${DEMO_USER_ID}`, {});
+      setGoalList((prev) =>
+        prev === null ? prev : prev.filter((g) => g.id !== id),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+    }
+  }
+
+  async function markAllRead() {
+    setError(null);
+    try {
+      await postJson("/v1/notifications/read", { userId: DEMO_USER_ID });
+      const data = (await getJson(
+        `/v1/notifications?userId=${DEMO_USER_ID}`,
+      )) as { data: NotificationItem[] };
+      setNotifications(data.data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Update failed");
+    }
+  }
+
+  async function deleteMyData() {
+    setError(null);
+    try {
+      await delJson(`/v1/users/${DEMO_USER_ID}/data`, {});
+      setProgress(null);
+      setRecs(null);
+      setGoalList(null);
+      setNotifications(null);
+      setConfirmDelete(false);
+      setScreen("profile");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Delete failed");
+    }
+  }
+
+  function openRec(rec: Rec) {
+    if (rec.action.screen === "program" && rec.action.slug) {
+      void openProgram(rec.action.slug);
+    } else if (rec.action.screen === "shop") {
+      setScreen("shop");
+    } else if (rec.action.screen === "learn") {
+      setScreen("learn");
+    } else {
+      setScreen("home");
+    }
+  }
+
+  useEffect(() => {
+    if (
+      (screen === "progress" || screen === "account") &&
+      (progress === null || goalList === null) &&
+      !busy
+    ) {
+      void loadProgressScreen();
+    }
+  }, [screen]);
+
   useEffect(() => {
     void refreshPending();
   }, []);
@@ -746,7 +915,11 @@ export default function App() {
                       ? "Learn · Library"
                       : screen === "learnDetail"
                         ? "Learn · Detail"
-                        : "Shop · Problem-first"}
+                        : screen === "shop"
+                          ? "Shop · Problem-first"
+                          : screen === "progress"
+                            ? "Progress · Trends"
+                            : "Profile · Goals & orders"}
       </Text>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -962,6 +1135,18 @@ export default function App() {
           </Pressable>
           <Pressable style={styles.secondary} onPress={() => setScreen("shop")}>
             <Text style={styles.secondaryText}>Shop</Text>
+          </Pressable>
+          <Pressable
+            style={styles.secondary}
+            onPress={() => setScreen("progress")}
+          >
+            <Text style={styles.secondaryText}>Progress</Text>
+          </Pressable>
+          <Pressable
+            style={styles.secondary}
+            onPress={() => setScreen("account")}
+          >
+            <Text style={styles.secondaryText}>Profile</Text>
           </Pressable>
         </View>
       )}
@@ -1235,6 +1420,148 @@ export default function App() {
           </Pressable>
         </View>
       )}
+
+      {screen === "progress" && (
+        <View>
+          <Text style={styles.label}>Score history</Text>
+          {(progress?.scores ?? []).slice(-14).map((s) => (
+            <View key={s.date} style={styles.barRow}>
+              <Text style={styles.barLabel}>{s.date.slice(5)}</Text>
+              <View style={styles.barTrack}>
+                <View style={[styles.barFill, { width: `${s.score}%` }]} />
+              </View>
+              <Text style={styles.barValue}>{s.score}</Text>
+            </View>
+          ))}
+          {progress && progress.scores.length === 0 ? (
+            <Text style={styles.cardSub}>
+              No scores yet — submit a check-in.
+            </Text>
+          ) : null}
+
+          <Text style={styles.label}>Milestones</Text>
+          {(progress?.milestones ?? []).map((m) => (
+            <View key={m.kind} style={styles.card}>
+              <Text style={styles.cardTitle}>🏆 {m.label}</Text>
+              <Text style={styles.cardSub}>
+                {new Date(m.achievedAt).toLocaleDateString()}
+              </Text>
+            </View>
+          ))}
+          {progress && progress.milestones.length === 0 ? (
+            <Text style={styles.cardSub}>No milestones yet — keep going.</Text>
+          ) : null}
+
+          <Text style={styles.label}>Recommended for you</Text>
+          {(recs ?? []).map((r) => (
+            <Pressable
+              key={`${r.kind}-${r.title}`}
+              style={styles.card}
+              onPress={() => openRec(r)}
+            >
+              <Text style={styles.cardDay}>{r.kind}</Text>
+              <Text style={styles.cardTitle}>{r.title}</Text>
+              <Text style={styles.cardSub}>{r.reason}</Text>
+            </Pressable>
+          ))}
+
+          <Pressable style={styles.secondary} onPress={() => setScreen("home")}>
+            <Text style={styles.secondaryText}>Back to Home</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {screen === "account" && (
+        <View>
+          <Text style={styles.label}>Notifications</Text>
+          {(notifications ?? []).slice(0, 5).map((n) => (
+            <View key={n.id} style={styles.card}>
+              <Text style={styles.cardTitle}>{n.title}</Text>
+              <Text style={styles.cardSub}>{n.body}</Text>
+            </View>
+          ))}
+          {(notifications ?? []).some((n) => !n.read) ? (
+            <Pressable
+              style={styles.secondary}
+              onPress={() => {
+                void markAllRead();
+              }}
+            >
+              <Text style={styles.secondaryText}>Mark all read</Text>
+            </Pressable>
+          ) : null}
+
+          <Text style={styles.label}>Goals</Text>
+          {(goalList ?? []).map((g) => (
+            <View key={g.id} style={styles.goalRow}>
+              <Pressable
+                style={[styles.checkbox, g.done && styles.checkboxDone]}
+                onPress={() => {
+                  void toggleGoal(g);
+                }}
+              >
+                <Text style={styles.checkboxText}>{g.done ? "✓" : ""}</Text>
+              </Pressable>
+              <Text style={[styles.goalTitle, g.done && styles.goalDone]}>
+                {g.title}
+              </Text>
+              <Pressable
+                onPress={() => {
+                  void removeGoal(g.id);
+                }}
+              >
+                <Text style={styles.goalDelete}>✕</Text>
+              </Pressable>
+            </View>
+          ))}
+          <TextInput
+            style={styles.input}
+            value={newGoal}
+            onChangeText={setNewGoal}
+            placeholder="New goal, e.g. Stretch twice a week"
+            placeholderTextColor={colors.ink[500]}
+          />
+          <Pressable
+            style={styles.primary}
+            onPress={() => {
+              void addGoal();
+            }}
+          >
+            <Text style={styles.primaryText}>Add goal</Text>
+          </Pressable>
+
+          <Text style={styles.label}>My orders</Text>
+          {(shopOrders ?? []).map((o) => (
+            <View key={o.id} style={styles.card}>
+              <Text style={styles.cardDay}>
+                #{o.id} · {o.status}
+              </Text>
+              <Text style={styles.cardSub}>
+                {o.items.map((i) => `${i.title} ×${i.qty}`).join(" · ")}
+              </Text>
+            </View>
+          ))}
+
+          <Text style={styles.label}>Settings</Text>
+          <Pressable
+            style={styles.secondary}
+            onPress={() => {
+              if (confirmDelete) {
+                void deleteMyData();
+              } else {
+                setConfirmDelete(true);
+              }
+            }}
+          >
+            <Text style={styles.secondaryText}>
+              {confirmDelete ? "Tap again to erase my data" : "Delete my data"}
+            </Text>
+          </Pressable>
+          <Pressable style={styles.secondary} onPress={() => setScreen("home")}>
+            <Text style={styles.secondaryText}>Back to Home</Text>
+          </Pressable>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -1358,4 +1685,45 @@ const styles = StyleSheet.create({
     color: colors.brand[700],
     marginTop: 8,
   },
+  barRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+  },
+  barLabel: { fontSize: 12, color: colors.ink[500], width: 44 },
+  barTrack: {
+    flex: 1,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.ink[100],
+    overflow: "hidden",
+  },
+  barFill: { height: 10, backgroundColor: colors.brand[500] },
+  barValue: { fontSize: 13, fontWeight: "700", width: 28, textAlign: "right" },
+  goalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.ink[100],
+  },
+  checkbox: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: colors.brand[500],
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxDone: { backgroundColor: colors.brand[500] },
+  checkboxText: { color: "#fff", fontWeight: "700" },
+  goalTitle: { flex: 1, fontSize: 15, fontWeight: "600" },
+  goalDone: { textDecorationLine: "line-through", color: colors.ink[500] },
+  goalDelete: { fontSize: 16, color: colors.danger, padding: 4 },
 });

@@ -13,6 +13,11 @@ import { adminProgramsRouter } from "./routes/adminPrograms";
 import { learnRouter } from "./routes/learn";
 import { adminContentRouter } from "./routes/adminContent";
 import { shopRouter } from "./routes/shop";
+import { goalsRouter } from "./routes/goals";
+import { notificationsRouter } from "./routes/notifications";
+import { accountRouter } from "./routes/account";
+import { progressRouter } from "./routes/progress";
+import { recommendationsRouter } from "./routes/recommendations";
 
 const app = express();
 
@@ -32,6 +37,11 @@ app.use("/v1", adminProgramsRouter);
 app.use("/v1", learnRouter);
 app.use("/v1", adminContentRouter);
 app.use("/v1", shopRouter);
+app.use("/v1", goalsRouter);
+app.use("/v1", notificationsRouter);
+app.use("/v1", accountRouter);
+app.use("/v1", progressRouter);
+app.use("/v1", recommendationsRouter);
 app.use(notFound);
 app.use(errorHandler);
 
