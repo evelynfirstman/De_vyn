@@ -27,9 +27,10 @@ import {
 } from "@expo-google-fonts/plus-jakarta-sans";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
+import { authClient } from "./src/auth-client";
 
-// Demo actor until Better Auth lands (Phase 2b).
-const DEMO_USER_ID = 1;
+// Signed-in app user (set after Better Auth + /v1/auth/link).
+// Screens that need it only render once linked; 0 fails API validation.
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:4000";
 
 type Screen =
@@ -345,10 +346,20 @@ const GOAL_OPTIONS = [
 ];
 const PAIN_OPTIONS = ["neck", "lower-back", "shoulders", "posture"];
 
+async function authHeaders(): Promise<Record<string, string>> {
+  try {
+    const cookies = await authClient.getCookie();
+    return cookies ? { Cookie: cookies } : {};
+  } catch {
+    return {};
+  }
+}
+
 async function postJson(path: string, body: unknown) {
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+    credentials: "omit",
     body: JSON.stringify(body),
   });
   const json = (await res.json()) as {
@@ -361,7 +372,10 @@ async function postJson(path: string, body: unknown) {
 }
 
 async function getJson(path: string) {
-  const res = await fetch(`${API_URL}${path}`);
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: { ...(await authHeaders()) },
+    credentials: "omit",
+  });
   const json = (await res.json()) as {
     data?: unknown;
     error?: { message: string };
@@ -374,7 +388,8 @@ async function getJson(path: string) {
 async function putJson(path: string, body: unknown) {
   const res = await fetch(`${API_URL}${path}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+    credentials: "omit",
     body: JSON.stringify(body),
   });
   const json = (await res.json()) as {
@@ -653,6 +668,12 @@ export default function App() {
   });
   const [screen, setScreen] = useState<Screen>("splash");
   const [busy, setBusy] = useState(false);
+  const [appUserId, setAppUserId] = useState<number | null>(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authName, setAuthName] = useState("");
+  const [authMode, setAuthMode] = useState<"in" | "up">("up");
+  const userId = appUserId ?? 0;
   const [error, setError] = useState<string | null>(null);
 
   const [goals, setGoals] = useState<string[]>([]);
@@ -704,7 +725,7 @@ export default function App() {
     try {
       const url =
         tag === null
-          ? `/v1/shop/recommendations?userId=${DEMO_USER_ID}`
+          ? `/v1/shop/recommendations?userId=${userId}`
           : `/v1/shop/recommendations?problem=${encodeURIComponent(tag)}`;
       const data = (await getJson(url)) as { data: ShopRec[] };
       setShopRecs(data.data);
@@ -774,6 +795,10 @@ export default function App() {
     return () => clearTimeout(t);
   }, [screen]);
 
+  useEffect(() => {
+    void restoreSession();
+  }, []);
+
   async function loadOwnedOptions() {
     try {
       const data = (await getJson("/v1/products?pageSize=50")) as {
@@ -790,7 +815,7 @@ export default function App() {
     setError(null);
     try {
       await putJson("/v1/profiles", {
-        userId: DEMO_USER_ID,
+        userId: userId,
         goals,
         painAreas,
         equipment: [],
@@ -813,7 +838,7 @@ export default function App() {
     setError(null);
     try {
       await postJson("/v1/assessments", {
-        userId: DEMO_USER_ID,
+        userId: userId,
         soreness,
         sleepHours: Number(sleep) || 0,
         stress,
@@ -821,7 +846,7 @@ export default function App() {
         painAreas,
       });
       const generated = (await postJson("/v1/plans/generate", {
-        userId: DEMO_USER_ID,
+        userId: userId,
       })) as Plan;
       setPlan(generated);
       setScreen("plan");
@@ -839,21 +864,21 @@ export default function App() {
       const [homeData, tipData, historyData, planData, notifyData, recData] =
         await Promise.all([
           getJson(
-            `/v1/home?userId=${DEMO_USER_ID}&date=${todayStr()}`,
+            `/v1/home?userId=${userId}&date=${todayStr()}`,
           ) as Promise<HomeData>,
           getJson("/v1/daily-tip") as Promise<DailyTip>,
-          getJson(
-            `/v1/sessions/history?userId=${DEMO_USER_ID}&limit=50`,
-          ) as Promise<HistoryItem[]>,
-          getJson(`/v1/plans/latest?userId=${DEMO_USER_ID}`).catch(
+          getJson(`/v1/sessions/history?userId=${userId}&limit=50`) as Promise<
+            HistoryItem[]
+          >,
+          getJson(`/v1/plans/latest?userId=${userId}`).catch(
             () => null,
           ) as Promise<{ items: PlanItem[] } | null>,
-          getJson(`/v1/notifications?userId=${DEMO_USER_ID}`) as Promise<{
+          getJson(`/v1/notifications?userId=${userId}`) as Promise<{
             data: NotificationItem[];
           }>,
-          getJson(
-            `/v1/shop/recommendations?userId=${DEMO_USER_ID}`,
-          ) as Promise<{ data: ShopRec[] }>,
+          getJson(`/v1/shop/recommendations?userId=${userId}`) as Promise<{
+            data: ShopRec[];
+          }>,
         ]);
       setHome(homeData);
       setTip(tipData);
@@ -896,7 +921,7 @@ export default function App() {
     setError(null);
     try {
       await postJson("/v1/check-ins", {
-        userId: DEMO_USER_ID,
+        userId: userId,
         date: todayStr(),
         soreness,
         sleepHours: Number(sleep) || 0,
@@ -905,7 +930,7 @@ export default function App() {
         timezone: "UTC",
       });
       const data = (await getJson(
-        `/v1/home?userId=${DEMO_USER_ID}&date=${todayStr()}`,
+        `/v1/home?userId=${userId}&date=${todayStr()}`,
       )) as HomeData;
       setHome(data);
     } catch (e) {
@@ -918,7 +943,8 @@ export default function App() {
   async function delJson(path: string, body: unknown) {
     const res = await fetch(`${API_URL}${path}`, {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+      credentials: "omit",
       body: JSON.stringify(body),
     });
     if (res.status === 204) return null;
@@ -989,7 +1015,7 @@ export default function App() {
     const total = selectedProgram.steps.reduce((a, s) => a + s.seconds, 0);
     const before = home?.score?.score ?? null;
     const payload = {
-      userId: DEMO_USER_ID,
+      userId: userId,
       programId: selectedProgram.id,
       durationSec: total,
       rating,
@@ -1001,7 +1027,7 @@ export default function App() {
       await refreshPending();
       try {
         const data = (await getJson(
-          `/v1/home?userId=${DEMO_USER_ID}&date=${todayStr()}`,
+          `/v1/home?userId=${userId}&date=${todayStr()}`,
         )) as HomeData;
         setHome(data);
         setLastGain(
@@ -1050,10 +1076,10 @@ export default function App() {
             category: string;
           }[];
         }>,
-        getJson(`/v1/learn/related?userId=${DEMO_USER_ID}`) as Promise<{
+        getJson(`/v1/learn/related?userId=${userId}`) as Promise<{
           data: LearnItem[];
         }>,
-        getJson(`/v1/bookmarks?userId=${DEMO_USER_ID}`) as Promise<{
+        getJson(`/v1/bookmarks?userId=${userId}`) as Promise<{
           data: Bookmark[];
         }>,
       ]);
@@ -1148,11 +1174,11 @@ export default function App() {
     setError(null);
     try {
       if (isBookmarked(kind, refId)) {
-        await delJson("/v1/bookmarks", { userId: DEMO_USER_ID, kind, refId });
+        await delJson("/v1/bookmarks", { userId: userId, kind, refId });
       } else {
-        await postJson("/v1/bookmarks", { userId: DEMO_USER_ID, kind, refId });
+        await postJson("/v1/bookmarks", { userId: userId, kind, refId });
       }
-      const data = (await getJson(`/v1/bookmarks?userId=${DEMO_USER_ID}`)) as {
+      const data = (await getJson(`/v1/bookmarks?userId=${userId}`)) as {
         data: Bookmark[];
       };
       setBookmarks(data.data);
@@ -1166,10 +1192,10 @@ export default function App() {
     setError(null);
     try {
       const [recs, orders] = await Promise.all([
-        getJson(`/v1/shop/recommendations?userId=${DEMO_USER_ID}`) as Promise<{
+        getJson(`/v1/shop/recommendations?userId=${userId}`) as Promise<{
           data: ShopRec[];
         }>,
-        getJson(`/v1/shop/orders?userId=${DEMO_USER_ID}`) as Promise<{
+        getJson(`/v1/shop/orders?userId=${userId}`) as Promise<{
           data: ShopOrder[];
         }>,
       ]);
@@ -1188,7 +1214,7 @@ export default function App() {
     setBuyMsg(null);
     try {
       const data = (await postJson("/v1/shop/checkout", {
-        userId: DEMO_USER_ID,
+        userId: userId,
         items: [{ sku, qty: 1 }],
         shipping: {},
       })) as {
@@ -1207,9 +1233,9 @@ export default function App() {
           `Order #${data.order.id} created · ${data.payment.txRef} · test mode: no live payment link`,
         );
       }
-      const orders = (await getJson(
-        `/v1/shop/orders?userId=${DEMO_USER_ID}`,
-      )) as { data: ShopOrder[] };
+      const orders = (await getJson(`/v1/shop/orders?userId=${userId}`)) as {
+        data: ShopOrder[];
+      };
       setShopOrders(orders.data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Checkout failed");
@@ -1227,9 +1253,9 @@ export default function App() {
       if (data.status === "paid" || data.status === "active") {
         setPendingTx(null);
         setBuyMsg("Payment confirmed ✓ — order is on its way.");
-        const orders = (await getJson(
-          `/v1/shop/orders?userId=${DEMO_USER_ID}`,
-        )) as { data: ShopOrder[] };
+        const orders = (await getJson(`/v1/shop/orders?userId=${userId}`)) as {
+          data: ShopOrder[];
+        };
         setShopOrders(orders.data);
       } else {
         setBuyMsg(`Still ${data.status} — finish payment, then check again.`);
@@ -1274,7 +1300,7 @@ export default function App() {
     setError(null);
     try {
       const data = (await getJson(
-        `/v1/bookmarks?userId=${DEMO_USER_ID}&kind=product`,
+        `/v1/bookmarks?userId=${userId}&kind=product`,
       )) as { data: WishlistItem[] };
       setWishlist(data.data);
     } catch (e) {
@@ -1285,7 +1311,7 @@ export default function App() {
   async function loadTickets() {
     setError(null);
     try {
-      const data = (await getJson(`/v1/tickets?userId=${DEMO_USER_ID}`)) as {
+      const data = (await getJson(`/v1/tickets?userId=${userId}`)) as {
         data: Ticket[];
       };
       setTickets(data.data);
@@ -1300,7 +1326,7 @@ export default function App() {
     setError(null);
     try {
       await postJson("/v1/tickets", {
-        userId: DEMO_USER_ID,
+        userId: userId,
         subject,
         message: ticketMessage,
       });
@@ -1316,7 +1342,7 @@ export default function App() {
     setError(null);
     try {
       const data = (await getJson(
-        `/v1/notifications?userId=${DEMO_USER_ID}`,
+        `/v1/notifications?userId=${userId}`,
       )) as unknown as NotificationItem[] | { data?: NotificationItem[] };
       setNotifyList(Array.isArray(data) ? data : (data?.data ?? []));
     } catch (e) {
@@ -1326,9 +1352,9 @@ export default function App() {
 
   async function loadGame() {
     try {
-      const data = (await getJson(
-        `/v1/gamification?userId=${DEMO_USER_ID}`,
-      )) as { data: GameState };
+      const data = (await getJson(`/v1/gamification?userId=${userId}`)) as {
+        data: GameState;
+      };
       setGame(data.data);
     } catch {
       setGame(null);
@@ -1341,19 +1367,19 @@ export default function App() {
     try {
       const [progressRes, recsRes, goalsRes, notifRes, ordersRes] =
         await Promise.all([
-          getJson(`/v1/progress?userId=${DEMO_USER_ID}`) as Promise<{
+          getJson(`/v1/progress?userId=${userId}`) as Promise<{
             data: ProgressData;
           }>,
-          getJson(`/v1/recommendations?userId=${DEMO_USER_ID}`) as Promise<{
+          getJson(`/v1/recommendations?userId=${userId}`) as Promise<{
             data: Rec[];
           }>,
-          getJson(`/v1/goals?userId=${DEMO_USER_ID}`) as Promise<{
+          getJson(`/v1/goals?userId=${userId}`) as Promise<{
             data: Goal[];
           }>,
-          getJson(`/v1/notifications?userId=${DEMO_USER_ID}`) as Promise<{
+          getJson(`/v1/notifications?userId=${userId}`) as Promise<{
             data: NotificationItem[];
           }>,
-          getJson(`/v1/shop/orders?userId=${DEMO_USER_ID}`) as Promise<{
+          getJson(`/v1/shop/orders?userId=${userId}`) as Promise<{
             data: ShopOrder[];
           }>,
         ]);
@@ -1374,9 +1400,9 @@ export default function App() {
     if (!title) return;
     setError(null);
     try {
-      await postJson("/v1/goals", { userId: DEMO_USER_ID, title });
+      await postJson("/v1/goals", { userId: userId, title });
       setNewGoal("");
-      const data = (await getJson(`/v1/goals?userId=${DEMO_USER_ID}`)) as {
+      const data = (await getJson(`/v1/goals?userId=${userId}`)) as {
         data: Goal[];
       };
       setGoalList(data.data);
@@ -1389,7 +1415,7 @@ export default function App() {
     setError(null);
     try {
       await putJson(`/v1/goals/${goal.id}`, {
-        userId: DEMO_USER_ID,
+        userId: userId,
         done: !goal.done,
       });
       setGoalList((prev) =>
@@ -1405,7 +1431,7 @@ export default function App() {
   async function removeGoal(id: number) {
     setError(null);
     try {
-      await delJson(`/v1/goals/${id}?userId=${DEMO_USER_ID}`, {});
+      await delJson(`/v1/goals/${id}?userId=${userId}`, {});
       setGoalList((prev) =>
         prev === null ? prev : prev.filter((g) => g.id !== id),
       );
@@ -1417,10 +1443,10 @@ export default function App() {
   async function markAllRead() {
     setError(null);
     try {
-      await postJson("/v1/notifications/read", { userId: DEMO_USER_ID });
-      const data = (await getJson(
-        `/v1/notifications?userId=${DEMO_USER_ID}`,
-      )) as { data: NotificationItem[] };
+      await postJson("/v1/notifications/read", { userId: userId });
+      const data = (await getJson(`/v1/notifications?userId=${userId}`)) as {
+        data: NotificationItem[];
+      };
       setNotifications(data.data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Update failed");
@@ -1430,7 +1456,7 @@ export default function App() {
   async function deleteMyData() {
     setError(null);
     try {
-      await delJson(`/v1/users/${DEMO_USER_ID}/data`, {});
+      await delJson(`/v1/users/${userId}/data`, {});
       setProgress(null);
       setRecs(null);
       setGoalList(null);
@@ -1485,10 +1511,10 @@ export default function App() {
     try {
       const [plansRes, entRes, refRes] = await Promise.all([
         getJson("/v1/subscriptions/plans") as Promise<{ data: SubPlan[] }>,
-        getJson(`/v1/entitlements?userId=${DEMO_USER_ID}`) as Promise<{
+        getJson(`/v1/entitlements?userId=${userId}`) as Promise<{
           data: Entitlement;
         }>,
-        getJson(`/v1/referrals?userId=${DEMO_USER_ID}`) as Promise<{
+        getJson(`/v1/referrals?userId=${userId}`) as Promise<{
           data: ReferralInfo;
         }>,
       ]);
@@ -1504,16 +1530,14 @@ export default function App() {
     setError(null);
     try {
       const data = (await postJson("/v1/subscriptions/checkout", {
-        userId: DEMO_USER_ID,
+        userId: userId,
         planId,
       })) as { txRef: string; paymentUrl?: string | null };
       if (data.paymentUrl) {
         setPendingTx(data.txRef);
         await WebBrowser.openBrowserAsync(data.paymentUrl);
       }
-      const ent = (await getJson(
-        `/v1/entitlements?userId=${DEMO_USER_ID}`,
-      )) as {
+      const ent = (await getJson(`/v1/entitlements?userId=${userId}`)) as {
         data: Entitlement;
       };
       setEntitlement(ent.data);
@@ -1525,8 +1549,8 @@ export default function App() {
   async function ensureReferralCode() {
     setError(null);
     try {
-      await postJson("/v1/referrals", { userId: DEMO_USER_ID });
-      const ref = (await getJson(`/v1/referrals?userId=${DEMO_USER_ID}`)) as {
+      await postJson("/v1/referrals", { userId: userId });
+      const ref = (await getJson(`/v1/referrals?userId=${userId}`)) as {
         data: ReferralInfo;
       };
       setReferral(ref.data);
@@ -1541,7 +1565,7 @@ export default function App() {
     try {
       await postJson("/v1/referrals/redeem", {
         code: redeemInput.trim(),
-        userId: DEMO_USER_ID,
+        userId: userId,
       });
       setRedeemMsg("Code redeemed ✓ — thanks for spreading recovery");
       setRedeemInput("");
@@ -1553,7 +1577,7 @@ export default function App() {
   async function togglePromos() {
     setError(null);
     try {
-      await putJson(`/v1/users/${DEMO_USER_ID}/prefs`, { promos: !promos });
+      await putJson(`/v1/users/${userId}/prefs`, { promos: !promos });
       setPromos(!promos);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Update failed");
@@ -1563,7 +1587,7 @@ export default function App() {
   async function toggleReminders() {
     setError(null);
     try {
-      const data = (await putJson(`/v1/users/${DEMO_USER_ID}/prefs`, {
+      const data = (await putJson(`/v1/users/${userId}/prefs`, {
         reminders: !reminders,
       })) as { reminders: boolean };
       setReminders(data.reminders);
@@ -1575,7 +1599,7 @@ export default function App() {
   async function saveReminderTime() {
     setError(null);
     try {
-      const data = (await putJson(`/v1/users/${DEMO_USER_ID}/prefs`, {
+      const data = (await putJson(`/v1/users/${userId}/prefs`, {
         reminderTime,
       })) as { reminderTime: string };
       setReminderTime(data.reminderTime);
@@ -1586,7 +1610,7 @@ export default function App() {
 
   async function loadPrefs() {
     try {
-      const data = (await getJson(`/v1/users/${DEMO_USER_ID}/prefs`)) as {
+      const data = (await getJson(`/v1/users/${userId}/prefs`)) as {
         promos: boolean;
         reminders: boolean;
         reminderTime: string;
@@ -1609,7 +1633,7 @@ export default function App() {
     setError(null);
     try {
       const data = (await postJson("/v1/coach/chat", {
-        userId: DEMO_USER_ID,
+        userId: userId,
         message,
         history: next.slice(-10).map((m) => ({
           role: m.role,
@@ -1715,7 +1739,70 @@ export default function App() {
     setPlan(null);
     setPrograms(null);
     setSelectedProgram(null);
-    setScreen("splash");
+    setAppUserId(null);
+    setAuthPassword("");
+    void authClient.signOut().catch(() => undefined);
+    setScreen("welcome");
+  }
+
+  async function restoreSession() {
+    try {
+      const session = (await authClient.getSession()) as unknown as {
+        data?: { user?: { email?: string; name?: string } } | null;
+      };
+      const email = session?.data?.user?.email;
+      if (!email) return;
+      const linked = (await postJson("/v1/auth/link", {
+        email,
+        name: session?.data?.user?.name ?? "",
+      })) as { appUserId: number };
+      setAppUserId(linked.appUserId);
+    } catch {
+      // stay signed out
+    }
+  }
+
+  async function submitAuth() {
+    const email = authEmail.trim().toLowerCase();
+    if (!email || authPassword.length < 8) {
+      setError("Enter an email and a password of 8+ characters.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      if (authMode === "up") {
+        const res = await authClient.signUp.email({
+          email,
+          password: authPassword,
+          name: authName.trim() || "Vyn User",
+        });
+        if (res.error) throw new Error(res.error.message ?? "Sign up failed");
+      } else {
+        const res = await authClient.signIn.email({
+          email,
+          password: authPassword,
+        });
+        if (res.error) throw new Error(res.error.message ?? "Sign in failed");
+      }
+      const linked = (await postJson("/v1/auth/link", {
+        email,
+        name: authName.trim(),
+      })) as { appUserId: number };
+      setAppUserId(linked.appUserId);
+      setAuthPassword("");
+      try {
+        await getJson(`/v1/profiles/${linked.appUserId}`);
+        setScreen("home");
+      } catch {
+        await loadOwnedOptions();
+        setScreen("about");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Authentication failed");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -1751,21 +1838,57 @@ export default function App() {
                   Personalized plans, guided sessions and curated products for
                   desk-based bodies — in 5 to 15 minutes a day.
                 </Text>
+                <View style={styles.chips}>
+                  <Chip
+                    label="Create account"
+                    selected={authMode === "up"}
+                    onToggle={() => setAuthMode("up")}
+                  />
+                  <Chip
+                    label="Sign in"
+                    selected={authMode === "in"}
+                    onToggle={() => setAuthMode("in")}
+                  />
+                </View>
+                {authMode === "up" ? (
+                  <TextInput
+                    style={styles.input}
+                    value={authName}
+                    onChangeText={setAuthName}
+                    placeholder="Name"
+                    placeholderTextColor={colors.ink[500]}
+                  />
+                ) : null}
+                <TextInput
+                  style={styles.input}
+                  value={authEmail}
+                  onChangeText={setAuthEmail}
+                  placeholder="Email"
+                  placeholderTextColor={colors.ink[500]}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                <TextInput
+                  style={styles.input}
+                  value={authPassword}
+                  onChangeText={setAuthPassword}
+                  placeholder="Password (8+ characters)"
+                  placeholderTextColor={colors.ink[500]}
+                  secureTextEntry
+                />
                 <Pressable
                   style={styles.primary}
                   onPress={() => {
-                    void loadOwnedOptions();
-                    setScreen("about");
+                    void submitAuth();
                   }}
+                  disabled={busy}
                 >
-                  <Text style={styles.primaryText}>Create account</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("profile")}
-                >
-                  <Text style={styles.secondaryText}>
-                    I have an account — skip
+                  <Text style={styles.primaryText}>
+                    {busy
+                      ? "Please wait…"
+                      : authMode === "up"
+                        ? "Create account"
+                        : "Sign in"}
                   </Text>
                 </Pressable>
               </View>
