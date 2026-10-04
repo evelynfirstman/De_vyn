@@ -5,3 +5,8 @@ export { Badge } from "./Badge";
 export type { BadgeTone } from "./Badge";
 export { TextInput } from "./TextInput";
 export { ScoreRing } from "./ScoreRing";
+export { AppHeader, BottomNav } from "./Navigation";
+export type { AppTab } from "./Navigation";
+export { SegmentedControl, SelectableCard } from "./Selection";
+export { MetricPod, RegionBar, StreakDots, RoutineHeroCard } from "./Recovery";
+export { QrScannerModal, Toast, OnboardingShell } from "./Overlays";

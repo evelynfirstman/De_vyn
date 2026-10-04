@@ -4,8 +4,8 @@ type ScoreRingProps = {
 };
 
 function bandColor(value: number): string {
-  if (value >= 70) return "var(--score-high)";
-  if (value >= 40) return "var(--score-mid)";
+  if (value >= 80) return "var(--score-high)";
+  if (value >= 50) return "var(--score-mid)";
   return "var(--score-low)";
 }
 
@@ -14,15 +14,22 @@ export function ScoreRing({ value, size = 120 }: ScoreRingProps) {
   const r = 52;
   const circumference = 2 * Math.PI * r;
   const offset = circumference - (circumference * clamped) / 100;
+  const band = clamped >= 80 ? "high" : clamped >= 50 ? "mid" : "low";
   return (
-    <svg width={size} height={size} viewBox="0 0 120 120" role="img">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 120 120"
+      role="img"
+      aria-label={`Recovery score ${clamped} out of 100, ${band}`}
+    >
       <circle
         cx="60"
         cy="60"
         r={r}
         fill="none"
-        stroke="var(--ink-100)"
-        strokeWidth="12"
+        stroke="var(--surface-container)"
+        strokeWidth="10"
       />
       <circle
         cx="60"
@@ -30,7 +37,7 @@ export function ScoreRing({ value, size = 120 }: ScoreRingProps) {
         r={r}
         fill="none"
         stroke={bandColor(clamped)}
-        strokeWidth="12"
+        strokeWidth="10"
         strokeLinecap="round"
         strokeDasharray={circumference}
         strokeDashoffset={offset}

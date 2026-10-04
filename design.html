@@ -6,7 +6,7 @@
 <title>Vyn Therapy — Design System Preview</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root {
     /* Brand */
@@ -28,16 +28,29 @@
     --ink-100: #f2f4f7;
     --ink-50:  #f9fafb;
     --white:   #ffffff;
-    /* Semantic — recovery score bands */
+    /* M3 surfaces (UI_UX) */
+    --surface: #f9f9ff;
+    --surface-low: #f1f3ff;
+    --surface-container: #e9edff;
+    --surface-high: #e0e8ff;
+    --on-surface: #141b2c;
+    --primary: #006857;
+    --secondary-container: #bcece2;
+    --tertiary-container: #c05400;
+    --tertiary-fixed: #ffdbca;
+    /* Semantic — recovery score bands (<50 / 50-79 / 80-100) */
     --score-low:  #e5484d;
     --score-mid:  #f5a524;
     --score-high: #18a957;
     --danger: #d92d20;
-    --radius: 12px;
+    --radius: 8px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --font: "Plus Jakarta Sans", "Inter", sans-serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -243,7 +256,7 @@
   <!-- SCORE / STREAK -->
   <section class="card">
     <h2>5 · Score &amp; Streak Samples</h2>
-    <p class="sub">Progress ring, streak flame, and status badges.</p>
+    <p class="sub">Progress ring (track #E9EDFF), streak flame, and status badges. Bands: &lt;50 Rest · 50–79 Easy · 80–100 Ready.</p>
     <div class="demo-row">
       <div class="score-card">
         <div class="ring high"><div class="ring-inner">82</div></div>
@@ -266,7 +279,45 @@
     </div>
   </section>
 
-  <footer>Vyn Therapy design preview · tokens live in <code>packages/tokens</code> (Phase 1)</footer>
+  <!-- UI_UX SCREENS -->
+  <section class="card">
+    <h2>6 · App Patterns (from UI_UX screens)</h2>
+    <p class="sub">BottomNav · Segmented · Metric pods · Region bars · Routine hero · QR modal · Onboarding shell. See docs/Vyn Therapy UI_UX/ + packages/ui.</p>
+    <div class="demo-row">
+      <div class="score-card" style="background:#fff;border:1px solid var(--ink-100);text-align:left">
+        <b>BottomNav (5 tabs)</b>
+        <div style="display:flex;gap:8px;margin-top:10px;font-size:13px;font-weight:600">
+          <span style="color:var(--brand-500)">⌂ Home</span><span>◉ Recover</span><span>▶ Learn</span><span>◈ Shop</span><span>▲ Progress</span>
+        </div>
+        <div style="margin-top:10px;font-size:13px;color:var(--ink-500)">Header: ☰ menu + title + avatar · sticky, blur.</div>
+      </div>
+      <div class="score-card" style="background:#fff;border:1px solid var(--ink-100);text-align:left">
+        <b>Segmented + Selectable card</b>
+        <div style="display:flex;gap:4px;background:var(--surface-container);border-radius:12px;padding:6px;margin-top:10px">
+          <span style="background:#fff;border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.06)">Week</span>
+          <span style="padding:6px 12px;font-size:13px;color:var(--ink-500)">Month</span>
+          <span style="padding:6px 12px;font-size:13px;color:var(--ink-500)">3M</span>
+        </div>
+        <div style="margin-top:10px;border:2px solid var(--brand-500);border-radius:16px;padding:10px;font-size:13px;background:#F0F9F6">✓ Desk worker · 8–10h <span style="background:var(--brand-100);border-radius:999px;padding:2px 8px;font-size:11px">Selected</span></div>
+      </div>
+    </div>
+    <div class="demo-row" style="margin-top:16px">
+      <div class="score-card" style="background:var(--brand-900);color:#fff;text-align:left">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.06em;color:#94F4DC">PRESCRIBED ROUTINE</div>
+        <b>Cervical reset · 12 min</b>
+        <div style="font-size:13px;opacity:.85">3 sessions · countdown + posture silhouette</div>
+        <div style="margin-top:12px"><span style="background:var(--brand-500);border-radius:8px;padding:10px 18px;font-size:14px;font-weight:600">Start session</span></div>
+      </div>
+      <div class="score-card" style="background:#fff;border:1px solid var(--ink-100);text-align:left">
+        <b>Body region recovery</b>
+        <div style="margin-top:10px;font-size:13px"><div style="display:flex;justify-content:space-between"><span>Neck</span><span>82%</span></div><div style="height:8px;border-radius:999px;background:var(--surface-container);margin:4px 0 8px"><div style="width:82%;height:100%;background:var(--score-high);border-radius:999px"></div></div>
+        <div style="display:flex;justify-content:space-between"><span>Lower back</span><span>68%</span></div><div style="height:8px;border-radius:999px;background:var(--surface-container);margin:4px 0"><div style="width:68%;height:100%;background:var(--tertiary-container);border-radius:999px"></div></div></div>
+      </div>
+    </div>
+    <p class="sub" style="margin-top:16px;margin-bottom:0">QR scanner = backdrop rgba(41,48,65,.8) + 192px viewfinder + laser accent · Toast = #293041 pill +5 XP · Onboarding = 390px frame, step bar, sticky 52px CTA, HIPAA note. Splash = gradient #0B3D36→#0D4E45→#12836F, 112px logo, loader.</p>
+  </section>
+
+  <footer>Vyn Therapy design preview · tokens live in <code>packages/tokens</code> · screens in <code>docs/Vyn Therapy UI_UX/</code></footer>
 </div>
 </body>
 </html>

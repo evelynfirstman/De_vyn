@@ -15,15 +15,16 @@ type TextInputProps = {
 
 const fieldStyle: React.CSSProperties = {
   width: "100%",
-  fontFamily: "inherit",
+  fontFamily: "var(--font)",
   fontSize: 15,
   color: "var(--ink-900)",
   background: "#fff",
-  border: "1.5px solid var(--ink-300)",
-  borderRadius: "var(--radius-md)",
+  border: "1px solid var(--ink-100)",
+  borderRadius: "var(--radius)",
   padding: "12px 14px",
   outline: "none",
   maxWidth: 420,
+  minHeight: 44,
 };
 
 export function TextInput({

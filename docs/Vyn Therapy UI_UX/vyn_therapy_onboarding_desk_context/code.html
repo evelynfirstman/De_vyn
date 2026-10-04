@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Vyn Therapy - Step 1: Professional Context</title>
+<!-- Tailwind CSS CDN with forms and container queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#12836F',
+              dark: '#0E5F54',
+              surface: '#EEFAF5',
+              darkbg: '#0B3D36',
+              lightaccent: '#DCF2EA'
+            },
+            neutral: {
+              textPrimary: '#101828',
+              textSecondary: '#667085',
+              border: '#E4E7EC',
+              bgLight: '#F2F4F7'
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<!-- Typography and Custom Styles -->
+<style data-purpose="typography">
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+<style data-purpose="layout-tweaks">
+    /* Custom scrollbar hiding for native mobile feel */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 flex justify-center items-center min-h-screen p-0 sm:p-4">
+<!-- BEGIN: MobileContainer -->
+<!-- Constrained precisely to iOS standard width 390px -->
+<main class="w-full max-w-[390px] h-[844px] max-h-[844px] bg-white flex flex-col justify-between shadow-2xl relative overflow-hidden rounded-none sm:rounded-[44px] border sm:border-slate-200" data-purpose="mobile-viewport">
+<!-- BEGIN: TopBarAndProgress -->
+<header class="w-full bg-white z-20 shrink-0 pt-2 px-5">
+<!-- iOS Status Bar Placeholder -->
+<div class="h-10 flex items-center justify-between text-xs font-semibold px-2 text-[#101828]" data-purpose="ios-status-bar">
+<span>9:41</span>
+<div class="flex items-center space-x-1.5">
+<!-- Signal Icon -->
+<svg class="w-3.5 h-3.5 fill-current" viewbox="0 0 16 16">
+<rect height="4" rx="0.5" width="2" x="1" y="11"></rect>
+<rect height="7" rx="0.5" width="2" x="5" y="8"></rect>
+<rect height="10" rx="0.5" width="2" x="9" y="5"></rect>
+<rect height="13" rx="0.5" width="2" x="13" y="2"></rect>
+</svg>
+<!-- Wifi Icon -->
+<svg class="w-3.5 h-3.5 fill-current" viewbox="0 0 16 16">
+<path d="M8 12.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm-4.95-3.05a7 7 0 0 1 9.9 0l-1.4 1.4a5 5 0 0 0-7.1 0l-1.4-1.4zm-2.83-2.83a11 11 0 0 1 15.56 0l-1.41 1.41a9 9 0 0 0-12.74 0L.22 6.62z"></path>
+</svg>
+<!-- Battery Icon -->
+<div class="w-6 h-3 border border-current rounded-[3px] p-0.5 flex items-center relative">
+<div class="h-full bg-current w-4 rounded-sm"></div>
+<div class="absolute -right-1 top-1 h-1 w-0.5 bg-current rounded-r-xs"></div>
+</div>
+</div>
+</div>
+<!-- Navigation & Step Indicator -->
+<div class="flex items-center justify-between py-2" data-purpose="navigation-header">
+<!-- Back Arrow Button -->
+<button aria-label="Go Back" class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-neutral-bgLight transition-colors text-neutral-textPrimary" type="button">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="m15 18-6-6 6-6"></path>
+</svg>
+</button>
+<!-- Brand Logo Mark (28px) -->
+<div class="w-7 h-7 flex items-center justify-center overflow-hidden rounded-md" data-purpose="brand-logo">
+<svg fill="none" height="28" viewbox="0 0 120 120" width="28" xmlns="http://www.w3.org/2000/svg">
+<rect fill="#0B3D36" height="120" rx="28" width="120"></rect>
+<path d="M34 40L60 84L86 40" stroke="#DCF2EA" stroke-linecap="round" stroke-linejoin="round" stroke-width="10"></path>
+<path d="M46 40L60 66L74 40" stroke="#12836F" stroke-linecap="round" stroke-linejoin="round" stroke-width="8"></path>
+<circle cx="60" cy="30" fill="#F97316" r="5"></circle>
+</svg>
+</div>
+<!-- Step Counter Badge -->
+<span class="text-xs font-semibold text-neutral-textSecondary tracking-wide">
+          Step 1 of 4
+        </span>
+</div>
+<!-- Linear Step Progress Bar (25% filled) -->
+<div class="w-full bg-[#F2F4F7] h-1.5 rounded-full mt-1.5 overflow-hidden" data-purpose="flow-progress">
+<div class="bg-[#12836F] h-full rounded-full transition-all duration-300" style="width: 25%;"></div>
+</div>
+</header>
+<!-- END: TopBarAndProgress -->
+<!-- BEGIN: FormBody -->
+<div class="flex-1 overflow-y-auto px-5 pt-4 pb-28 no-scrollbar" data-purpose="scrollable-content">
+<!-- Screen Header Section -->
+<div class="mb-6" data-purpose="section-header">
+<!-- Personalized Protocol Pill Badge -->
+<span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase bg-[#EEFAF5] text-[#0E5F54] mb-3">
+          PERSONALIZED PROTOCOL
+        </span>
+<!-- Primary Title -->
+<h1 class="text-[24px] font-bold leading-tight text-[#101828] mb-2 tracking-tight">
+          Tell us about your desk routine
+        </h1>
+<!-- Descriptive Subtitle -->
+<p class="text-[15px] font-normal leading-relaxed text-[#667085]">
+          We tune biomechanical resets and posture programs to your working posture and screen time.
+        </p>
+</div>
+<!-- Question 1: Primary Occupation -->
+<fieldset class="mb-6" data-purpose="question-occupation">
+<legend class="text-[14px] font-semibold text-[#101828] mb-2.5 flex items-center justify-between w-full">
+<span>What is your primary occupation?</span>
+<span class="text-xs text-[#667085] font-normal">Select one</span>
+</legend>
+<div class="space-y-2.5">
+<!-- Option: Software Engineer (Active) -->
+<label class="relative flex items-center justify-between p-3.5 rounded-[16px] border-[1.5px] border-[#12836F] bg-[#EEFAF5]/50 shadow-sm cursor-pointer transition-all">
+<input checked="" class="sr-only" name="occupation" type="radio" value="swe"/>
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#12836F] shadow-xs">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-[14.5px] font-medium text-[#101828]">Software Engineer / Tech</span>
+</div>
+<!-- Checkmark Indicator -->
+<div class="w-5 h-5 rounded-full bg-[#12836F] flex items-center justify-center text-white">
+<svg class="w-3.5 h-3.5 stroke-[2.5]" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<polyline points="20 6 9 17 4 12"></polyline>
+</svg>
+</div>
+</label>
+<!-- Option: Product Designer -->
+<label class="relative flex items-center justify-between p-3.5 rounded-[16px] border-[1.5px] border-[#E4E7EC] bg-white hover:border-slate-300 cursor-pointer transition-all">
+<input class="sr-only" name="occupation" type="radio" value="designer"/>
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-full bg-[#F2F4F7] flex items-center justify-center text-[#667085]">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-[14.5px] font-medium text-[#101828]">Product Designer / Creative</span>
+</div>
+<div class="w-5 h-5 rounded-full border border-neutral-300 bg-white"></div>
+</label>
+<!-- Option: Finance / Legal -->
+<label class="relative flex items-center justify-between p-3.5 rounded-[16px] border-[1.5px] border-[#E4E7EC] bg-white hover:border-slate-300 cursor-pointer transition-all">
+<input class="sr-only" name="occupation" type="radio" value="finance"/>
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-full bg-[#F2F4F7] flex items-center justify-center text-[#667085]">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-[14.5px] font-medium text-[#101828]">Finance / Legal / Writing</span>
+</div>
+<div class="w-5 h-5 rounded-full border border-neutral-300 bg-white"></div>
+</label>
+<!-- Option: Executive -->
+<label class="relative flex items-center justify-between p-3.5 rounded-[16px] border-[1.5px] border-[#E4E7EC] bg-white hover:border-slate-300 cursor-pointer transition-all">
+<input class="sr-only" name="occupation" type="radio" value="exec"/>
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-full bg-[#F2F4F7] flex items-center justify-center text-[#667085]">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<span class="text-[14.5px] font-medium text-[#101828]">Executive / Management</span>
+</div>
+<div class="w-5 h-5 rounded-full border border-neutral-300 bg-white"></div>
+</label>
+</div>
+</fieldset>
+<!-- Question 2: Daily Seated Desk Hours (Segmented Selector) -->
+<fieldset class="mb-6" data-purpose="question-hours">
+<legend class="text-[14px] font-semibold text-[#101828] mb-2.5">
+          Daily seated desk hours
+        </legend>
+<!-- Segmented Button Group Grid -->
+<div class="grid grid-cols-4 gap-2 bg-[#F2F4F7] p-1.5 rounded-[16px]">
+<!-- Choice: < 6 hrs -->
+<label class="cursor-pointer">
+<input class="sr-only peer" name="hours" type="radio" value="lt6"/>
+<div class="py-2.5 px-1 text-center rounded-[12px] text-xs font-semibold text-[#667085] peer-checked:bg-white peer-checked:text-[#12836F] peer-checked:shadow-sm transition-all">
+              &lt; 6 hrs
+            </div>
+</label>
+<!-- Choice: 6–8 hrs -->
+<label class="cursor-pointer">
+<input class="sr-only peer" name="hours" type="radio" value="6to8"/>
+<div class="py-2.5 px-1 text-center rounded-[12px] text-xs font-semibold text-[#667085] peer-checked:bg-white peer-checked:text-[#12836F] peer-checked:shadow-sm transition-all">
+              6–8 hrs
+            </div>
+</label>
+<!-- Choice: 8–10 hrs (Active) -->
+<label class="cursor-pointer">
+<input checked="" class="sr-only peer" name="hours" type="radio" value="8to10"/>
+<div class="py-2.5 px-1 text-center rounded-[12px] text-xs font-semibold bg-white text-[#12836F] shadow-sm transition-all border border-[#12836F]/20">
+              8–10 hrs
+            </div>
+</label>
+<!-- Choice: 10+ hrs -->
+<label class="cursor-pointer">
+<input class="sr-only peer" name="hours" type="radio" value="gt10"/>
+<div class="py-2.5 px-1 text-center rounded-[12px] text-xs font-semibold text-[#667085] peer-checked:bg-white peer-checked:text-[#12836F] peer-checked:shadow-sm transition-all">
+              10+ hrs
+            </div>
+</label>
+</div>
+</fieldset>
+<!-- Question 3: Workstation Setup -->
+<fieldset class="mb-4" data-purpose="question-workstation">
+<legend class="text-[14px] font-semibold text-[#101828] mb-2.5">
+          Workstation setup
+        </legend>
+<div class="grid grid-cols-3 gap-2.5">
+<!-- Setup 1: Single Laptop -->
+<label class="border-[1.5px] border-[#E4E7EC] bg-white rounded-[16px] p-3 text-center flex flex-col items-center justify-center cursor-pointer hover:border-slate-300 transition-all">
+<input class="sr-only" name="setup" type="radio" value="laptop"/>
+<div class="w-8 h-8 mb-2 flex items-center justify-center text-[#667085]">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<rect height="12" rx="2" stroke-width="1.8" width="18" x="3" y="4"></rect>
+<path d="M2 19h20" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+</div>
+<span class="text-xs font-medium text-[#101828] leading-tight">Single Laptop</span>
+</label>
+<!-- Setup 2: Dual Monitors + Chair (Selected) -->
+<label class="border-[1.5px] border-[#12836F] bg-[#EEFAF5]/60 rounded-[16px] p-3 text-center flex flex-col items-center justify-center relative cursor-pointer shadow-sm">
+<input checked="" class="sr-only" name="setup" type="radio" value="dual"/>
+<!-- Tiny Check Indicator -->
+<span class="absolute top-2 right-2 w-3.5 h-3.5 bg-[#12836F] rounded-full flex items-center justify-center text-white">
+<svg class="w-2.5 h-2.5 stroke-[3]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<polyline points="20 6 9 17 4 12"></polyline>
+</svg>
+</span>
+<div class="w-8 h-8 mb-2 flex items-center justify-center text-[#12836F]">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<rect height="8" rx="1.5" stroke-width="1.8" width="11" x="2" y="5"></rect>
+<rect height="8" rx="1.5" stroke-width="1.8" width="7" x="15" y="5"></rect>
+<path d="M7 17v2m10-2v2M4 21h16" stroke-linecap="round" stroke-width="1.8"></path>
+</svg>
+</div>
+<span class="text-xs font-semibold text-[#101828] leading-tight">Dual Monitors + Chair</span>
+</label>
+<!-- Setup 3: Standing Desk Hybrid -->
+<label class="border-[1.5px] border-[#E4E7EC] bg-white rounded-[16px] p-3 text-center flex flex-col items-center justify-center cursor-pointer hover:border-slate-300 transition-all">
+<input class="sr-only" name="setup" type="radio" value="standing"/>
+<div class="w-8 h-8 mb-2 flex items-center justify-center text-[#667085]">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 8h16M4 8v12M20 8v12M9 8v4m6-4v4" stroke-linecap="round" stroke-width="1.8"></path>
+</svg>
+</div>
+<span class="text-xs font-medium text-[#101828] leading-tight">Standing Desk Hybrid</span>
+</label>
+</div>
+</fieldset>
+</div>
+<!-- END: FormBody -->
+<!-- BEGIN: StickyBottomCTA -->
+<footer class="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-md pt-3 pb-8 px-5 border-t border-[#F2F4F7]" data-purpose="sticky-bottom-bar">
+<!-- Primary Action CTA Button -->
+<button class="w-full bg-[#12836F] hover:bg-[#0E5F54] active:scale-[0.99] text-white font-bold text-[15px] py-3.5 px-6 rounded-[12px] shadow-sm flex items-center justify-center space-x-2 transition-all duration-150" type="button">
+<span>Continue to Body Assessment</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Security / Time Commitment Sub-note -->
+<div class="flex items-center justify-center space-x-1.5 mt-2.5 text-[13px] text-[#667085]">
+<svg class="w-3.5 h-3.5 text-[#12836F]" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span>Takes 2 minutes · HIPAA-compliant data security</span>
+</div>
+<!-- Native iOS Home Indicator Bar -->
+<div class="w-32 h-1 bg-neutral-300 rounded-full mx-auto mt-4" data-purpose="home-indicator"></div>
+</footer>
+<!-- END: StickyBottomCTA -->
+</main>
+<!-- END: MobileContainer -->
+</body></html>

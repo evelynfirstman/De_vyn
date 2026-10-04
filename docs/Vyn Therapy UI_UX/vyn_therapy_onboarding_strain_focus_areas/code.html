@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Vyn Therapy - Discomfort &amp; Target Pain Points</title>
+<!-- Google Fonts: Plus Jakarta Sans -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#12836F',
+              dark: '#0B3D36',
+              light: '#DCF2EA',
+              accent: '#F97316'
+            },
+            warm: {
+              badgeBg: '#FFEDD5',
+              badgeText: '#D9622B',
+              amber: '#F5A524'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif']
+          },
+          boxShadow: {
+            'card-selected': '0 4px 14px -2px rgba(18, 131, 111, 0.12), 0 2px 6px -1px rgba(18, 131, 111, 0.08)',
+            'sticky-bar': '0 -4px 20px rgba(0, 0, 0, 0.06)'
+          }
+        }
+      }
+    }
+  </script>
+<!-- Custom Styles for iOS Touch Target & Slider -->
+<style data-purpose="custom-styling">
+    body {
+      -webkit-tap-highlight-color: transparent;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    /* Custom Range Slider Thumb Styling */
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 24px;
+      width: 24px;
+      border-radius: 9999px;
+      background: #FFFFFF;
+      border: 3.5px solid #F5A524;
+      box-shadow: 0 2px 8px rgba(245, 165, 36, 0.45);
+      cursor: pointer;
+      margin-top: -8px;
+      transition: transform 0.15s ease;
+    }
+    
+    input[type=range]::-webkit-slider-thumb:active {
+      transform: scale(1.15);
+    }
+
+    input[type=range]::-moz-range-thumb {
+      height: 24px;
+      width: 24px;
+      border-radius: 9999px;
+      background: #FFFFFF;
+      border: 3.5px solid #F5A524;
+      box-shadow: 0 2px 8px rgba(245, 165, 36, 0.45);
+      cursor: pointer;
+    }
+
+    /* iOS Safe Area Support */
+    .pb-safe {
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+    .pt-safe {
+      padding-top: env(safe-area-inset-top, 12px);
+    }
+  </style>
+</head>
+<body class="bg-[#F8FAFC] text-[#101828] min-h-screen flex flex-col antialiased selection:bg-[#12836F] selection:text-white">
+<!-- BEGIN: TopNavigation -->
+<header class="sticky top-0 z-30 bg-[#F8FAFC]/90 backdrop-blur-md border-b border-slate-100 pt-safe px-4 pb-3" data-purpose="top-navigation">
+<div class="max-w-md mx-auto flex items-center justify-between">
+<!-- Back Arrow Button -->
+<button aria-label="Go back to Step 1" class="w-10 h-10 -ml-1 rounded-full flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#12836F]/40" type="button">
+<svg class="w-5 h-5 stroke-[2.2]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15.75 19.5L8.25 12l7.5-7.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Step Counter & Brand Mark Indicator -->
+<div class="flex items-center gap-2">
+<div aria-hidden="true" class="w-5 h-5 rounded-md overflow-hidden flex-shrink-0">
+<!-- Mini Brand Logo -->
+<svg class="w-full h-full" fill="none" viewbox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+<rect fill="#0B3D36" height="120" rx="28" width="120"></rect>
+<path d="M34 40L60 84L86 40" stroke="#DCF2EA" stroke-linecap="round" stroke-linejoin="round" stroke-width="10"></path>
+<path d="M46 40L60 66L74 40" stroke="#12836F" stroke-linecap="round" stroke-linejoin="round" stroke-width="8"></path>
+<circle cx="60" cy="30" fill="#F97316" r="5"></circle>
+</svg>
+</div>
+<span class="text-xs font-semibold tracking-wide text-slate-500 uppercase">Step 2 of 4</span>
+</div>
+<!-- Quick Action / Skip Button -->
+<button class="text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors py-1 px-2" type="button">
+        Skip
+      </button>
+</div>
+<!-- 50% Progress Bar Indicator -->
+<div class="max-w-md mx-auto mt-2.5 px-0.5">
+<div aria-valuemax="100" aria-valuemin="0" aria-valuenow="50" class="h-1.5 w-full bg-slate-200/80 rounded-full overflow-hidden" role="progressbar">
+<div class="h-full bg-[#12836F] w-1/2 rounded-full transition-all duration-300 ease-out"></div>
+</div>
+</div>
+</header>
+<!-- END: TopNavigation -->
+<!-- BEGIN: MainContent -->
+<main class="flex-1 max-w-md mx-auto w-full px-4 pt-4 pb-32">
+<!-- BEGIN: HeaderSection -->
+<section class="mb-5" data-purpose="step-intro">
+<!-- Badge -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#FFEDD5] border border-orange-200/60 mb-2.5">
+<span class="w-1.5 h-1.5 rounded-full bg-[#D9622B] animate-pulse"></span>
+<span class="text-[11px] font-bold tracking-wider text-[#D9622B] uppercase">Symptom Mapping</span>
+</div>
+<!-- Title H1 -->
+<h1 class="text-[24px] font-bold leading-tight tracking-tight text-[#101828] mb-1.5">
+        Where do you feel strain during work?
+      </h1>
+<!-- Subtitle -->
+<p class="text-[15px] leading-relaxed text-[#667085]">
+        Select your acute discomfort areas. We prioritize these in your daily recovery loops.
+      </p>
+</section>
+<!-- END: HeaderSection -->
+<!-- BEGIN: PainPointsList -->
+<section aria-label="Target Pain Points Selection" class="space-y-3 mb-6" data-purpose="target-selection">
+<!-- Item 1: Selected -->
+<label class="group relative flex items-start gap-3.5 p-3.5 rounded-2xl bg-white border-2 border-[#12836F] shadow-card-selected transition-all cursor-pointer">
+<input checked="" class="sr-only peer" name="pain_points" type="checkbox" value="tech_neck"/>
+<!-- Selection Checkbox Visual Indicator -->
+<div class="w-6 h-6 rounded-lg bg-[#12836F] text-white flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+<svg class="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4.5 12.75l6 6 9-13.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div class="flex-1 min-w-0 pr-1">
+<div class="flex items-center gap-2">
+<span class="font-bold text-[15px] text-[#101828] tracking-tight">Tech Neck &amp; Cervical Spine</span>
+<span class="inline-block text-[10px] font-semibold bg-[#DCF2EA] text-[#0B3D36] px-1.5 py-0.5 rounded">High Strain</span>
+</div>
+<p class="text-[13px] text-[#667085] leading-snug mt-0.5">
+            C1–C7 stiffness, forward head tilt, occipital tension
+          </p>
+</div>
+</label>
+<!-- Item 2: Selected -->
+<label class="group relative flex items-start gap-3.5 p-3.5 rounded-2xl bg-white border-2 border-[#12836F] shadow-card-selected transition-all cursor-pointer">
+<input checked="" class="sr-only peer" name="pain_points" type="checkbox" value="upper_trapezius"/>
+<!-- Checkbox Visual Indicator -->
+<div class="w-6 h-6 rounded-lg bg-[#12836F] text-white flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+<svg class="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4.5 12.75l6 6 9-13.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div class="flex-1 min-w-0 pr-1">
+<div class="flex items-center gap-2">
+<span class="font-bold text-[15px] text-[#101828] tracking-tight">Upper Trapezius &amp; Shoulders</span>
+</div>
+<p class="text-[13px] text-[#667085] leading-snug mt-0.5">
+            Shoulder hunching from typing, scapular tightness
+          </p>
+</div>
+</label>
+<!-- Item 3: Selected -->
+<label class="group relative flex items-start gap-3.5 p-3.5 rounded-2xl bg-white border-2 border-[#12836F] shadow-card-selected transition-all cursor-pointer">
+<input checked="" class="sr-only peer" name="pain_points" type="checkbox" value="lumbar_spine"/>
+<!-- Checkbox Visual Indicator -->
+<div class="w-6 h-6 rounded-lg bg-[#12836F] text-white flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+<svg class="w-3.5 h-3.5 stroke-[3]" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M4.5 12.75l6 6 9-13.5" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</div>
+<div class="flex-1 min-w-0 pr-1">
+<div class="flex items-center gap-2">
+<span class="font-bold text-[15px] text-[#101828] tracking-tight">Lumbar Spine / Lower Back</span>
+</div>
+<p class="text-[13px] text-[#667085] leading-snug mt-0.5">
+            Compression from prolonged sitting, sacral ache
+          </p>
+</div>
+</label>
+<!-- Item 4: Unselected -->
+<label class="group relative flex items-start gap-3.5 p-3.5 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-300 transition-all cursor-pointer">
+<input class="sr-only peer" name="pain_points" type="checkbox" value="wrist_hands"/>
+<!-- Unselected Box Visual Indicator -->
+<div class="w-6 h-6 rounded-lg border-2 border-slate-300 group-hover:border-slate-400 bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors">
+<!-- Hidden check when unselected -->
+</div>
+<div class="flex-1 min-w-0 pr-1">
+<span class="font-semibold text-[15px] text-slate-800 tracking-tight">Wrist, Hands &amp; Forearms</span>
+<p class="text-[13px] text-[#667085] leading-snug mt-0.5">
+            Carpal pressure, mouse tendon fatigue
+          </p>
+</div>
+</label>
+<!-- Item 5: Unselected -->
+<label class="group relative flex items-start gap-3.5 p-3.5 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-300 transition-all cursor-pointer">
+<input class="sr-only peer" name="pain_points" type="checkbox" value="eye_strain"/>
+<!-- Unselected Box Visual Indicator -->
+<div class="w-6 h-6 rounded-lg border-2 border-slate-300 group-hover:border-slate-400 bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors">
+<!-- Hidden check when unselected -->
+</div>
+<div class="flex-1 min-w-0 pr-1">
+<span class="font-semibold text-[15px] text-slate-800 tracking-tight">Eye Strain &amp; Headaches</span>
+<p class="text-[13px] text-[#667085] leading-snug mt-0.5">
+            Blue light fatigue, tension headaches
+          </p>
+</div>
+</label>
+</section>
+<!-- END: PainPointsList -->
+<!-- BEGIN: SeverityRatingSection -->
+<section class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm" data-purpose="discomfort-intensity">
+<div class="flex items-center justify-between mb-3">
+<div>
+<h2 class="text-sm font-bold text-[#101828]">Peak discomfort level during afternoons</h2>
+<p class="text-xs text-slate-500 mt-0.5">Assessed for primary focus targeting</p>
+</div>
+<!-- Intensity Metric Pill -->
+<div class="flex items-baseline gap-1 bg-amber-50 border border-amber-200/80 px-2.5 py-1 rounded-xl">
+<span class="text-sm font-extrabold text-[#D9622B]" id="slider-value-display">6</span>
+<span class="text-[11px] font-semibold text-amber-700/80">/10</span>
+</div>
+</div>
+<!-- Interactive Range Slider -->
+<div class="relative py-1">
+<div class="relative w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+<div class="absolute h-full bg-gradient-to-r from-emerald-500 via-[#F5A524] to-red-500 w-full opacity-35"></div>
+<div class="absolute h-full bg-[#F5A524] rounded-full" id="slider-fill" style="width: 60%;"></div>
+</div>
+<input aria-label="Peak discomfort level rating" class="absolute inset-0 w-full h-4 opacity-0 cursor-pointer" id="severity-slider" max="10" min="1" step="1" type="range" value="6"/>
+</div>
+<!-- Severity Labels & Benchmark -->
+<div class="flex items-center justify-between text-[11px] font-medium text-slate-400 mt-2 px-0.5">
+<span>Mild (1-3)</span>
+<span class="text-[#D9622B] font-bold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-[#F5A524] inline-block"></span>
+          Moderate to Sore (6/10)
+        </span>
+<span>Severe (9-10)</span>
+</div>
+</section>
+<!-- END: SeverityRatingSection -->
+</main>
+<!-- END: MainContent -->
+<!-- BEGIN: StickyBottomCTA -->
+<footer class="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-sticky-bar z-40 pb-safe pt-3 px-4" data-purpose="sticky-bottom-action">
+<div class="max-w-md mx-auto flex flex-col items-center">
+<!-- Primary Action CTA Button -->
+<button class="w-full h-13 py-3.5 px-6 rounded-xl bg-[#12836F] hover:bg-[#0E6C5C] active:scale-[0.99] text-white font-bold text-[16px] tracking-wide shadow-lg shadow-[#12836F]/25 flex items-center justify-center gap-2 transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[#12836F] focus:ring-offset-2" type="button">
+<span>Continue to Gear Pairing</span>
+<svg class="w-5 h-5 stroke-[2.4] -mr-0.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+<!-- Assistive Caption -->
+<p class="text-[12px] text-slate-400 text-center mt-2.5 tracking-tight font-medium">
+        You can update these anytime in your recovery profile.
+      </p>
+</div>
+</footer>
+<!-- END: StickyBottomCTA -->
+<!-- Script for Slider Interactive Updates -->
+<script data-purpose="slider-interaction">
+    const slider = document.getElementById('severity-slider');
+    const fill = document.getElementById('slider-fill');
+    const display = document.getElementById('slider-value-display');
+
+    if (slider && fill && display) {
+      slider.addEventListener('input', (e) => {
+        const val = e.target.value;
+        const percentage = ((val - slider.min) / (slider.max - slider.min)) * 100;
+        fill.style.width = `${percentage}%`;
+        display.textContent = val;
+      });
+    }
+  </script>
+</body></html>
