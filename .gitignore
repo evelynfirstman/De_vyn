@@ -8,3 +8,4 @@ out/
 .expo-web*.log
 .expo/
 backups/
+~$*
