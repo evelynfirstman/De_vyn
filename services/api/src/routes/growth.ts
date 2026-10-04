@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db";
+import { initFlutterwavePayment } from "./shop";
 
 export const growthRouter = Router();
 
@@ -44,9 +45,25 @@ growthRouter.post("/subscriptions/checkout", async (req, res, next) => {
                  status, tx_ref AS "txRef", created_at AS "createdAt"`,
       [body.userId, body.planId, txRef],
     );
-    // Recurring charge itself is completed via Flutterwave (live keys);
-    // activation happens in the payments webhook on tx_ref match.
-    res.status(201).json({ data: { ...rows[0], plan: plan.rows[0] } });
+    // First charge goes through hosted checkout like an order (true
+    // auto-recurring needs a flutterwave_plan_id on the plan — Phase 13).
+    // Activation happens in the payments webhook on tx_ref match.
+    const p = plan.rows[0] as {
+      name: string;
+      amountMinor: number;
+      currency: string;
+    };
+    const init = await initFlutterwavePayment({
+      txRef,
+      amountMajor: p.amountMinor / 100,
+      currency: p.currency,
+      customerName: "",
+      customerEmail: "",
+      customerPhone: "",
+    });
+    res.status(201).json({
+      data: { ...rows[0], plan: plan.rows[0], paymentUrl: init.paymentUrl },
+    });
   } catch (err) {
     next(err);
   }

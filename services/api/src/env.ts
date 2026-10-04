@@ -16,6 +16,7 @@ const schema = z.object({
   FLUTTERWAVE_PUBLIC_KEY: z.string().default(""),
   FLUTTERWAVE_SECRET_KEY: z.string().default(""),
   FLUTTERWAVE_LIVE: z.string().default("false"),
+  FLUTTERWAVE_REDIRECT_URL: z.string().default(""),
   QR_SECRET: z.string().default("dev-qr-secret"),
   WOO_URL: z.string().default(""),
   WOO_CK: z.string().default(""),

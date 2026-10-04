@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { colors } from "@vyn/tokens";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as WebBrowser from "expo-web-browser";
 
 // Demo actor until Better Auth lands (Phase 2b).
 const DEMO_USER_ID = 1;
@@ -666,6 +667,7 @@ export default function App() {
   const [qrInput, setQrInput] = useState("");
   const [qrResult, setQrResult] = useState<string | null>(null);
   const [buyMsg, setBuyMsg] = useState<string | null>(null);
+  const [pendingTx, setPendingTx] = useState<string | null>(null);
   const [shopProblem, setShopProblem] = useState<string | null>(null);
 
   async function loadShopProblem(tag: string | null) {
@@ -1153,12 +1155,18 @@ export default function App() {
         order: { id: number };
         payment: { txRef: string; paymentUrl: string | null };
       };
-      setBuyMsg(
-        `Order #${data.order.id} created · ${data.payment.txRef}` +
-          (data.payment.paymentUrl
-            ? " · complete payment in the link sent to you"
-            : " · test mode: no live payment link"),
-      );
+      if (data.payment.paymentUrl) {
+        setPendingTx(data.payment.txRef);
+        setBuyMsg(`Order #${data.order.id} created — completing payment…`);
+        await WebBrowser.openBrowserAsync(data.payment.paymentUrl);
+        setBuyMsg(
+          `Order #${data.order.id} — finish payment in the browser, then tap “Check status”.`,
+        );
+      } else {
+        setBuyMsg(
+          `Order #${data.order.id} created · ${data.payment.txRef} · test mode: no live payment link`,
+        );
+      }
       const orders = (await getJson(
         `/v1/shop/orders?userId=${DEMO_USER_ID}`,
       )) as { data: ShopOrder[] };
@@ -1167,6 +1175,27 @@ export default function App() {
       setError(e instanceof Error ? e.message : "Checkout failed");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function checkPayment(txRef: string) {
+    setError(null);
+    try {
+      const data = (await getJson(
+        `/v1/shop/payments/status?txRef=${encodeURIComponent(txRef)}`,
+      )) as { kind: string; status: string };
+      if (data.status === "paid" || data.status === "active") {
+        setPendingTx(null);
+        setBuyMsg("Payment confirmed ✓ — order is on its way.");
+        const orders = (await getJson(
+          `/v1/shop/orders?userId=${DEMO_USER_ID}`,
+        )) as { data: ShopOrder[] };
+        setShopOrders(orders.data);
+      } else {
+        setBuyMsg(`Still ${data.status} — finish payment, then check again.`);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Status check failed");
     }
   }
 
@@ -1434,10 +1463,14 @@ export default function App() {
   async function subscribe(planId: number) {
     setError(null);
     try {
-      await postJson("/v1/subscriptions/checkout", {
+      const data = (await postJson("/v1/subscriptions/checkout", {
         userId: DEMO_USER_ID,
         planId,
-      });
+      })) as { txRef: string; paymentUrl?: string | null };
+      if (data.paymentUrl) {
+        setPendingTx(data.txRef);
+        await WebBrowser.openBrowserAsync(data.paymentUrl);
+      }
       const ent = (await getJson(
         `/v1/entitlements?userId=${DEMO_USER_ID}`,
       )) as {
@@ -2430,6 +2463,18 @@ export default function App() {
                 </Pressable>
               ))}
               {buyMsg ? <Text style={styles.doneMsg}>{buyMsg}</Text> : null}
+              {pendingTx ? (
+                <Pressable
+                  style={styles.primary}
+                  onPress={() => {
+                    void checkPayment(pendingTx);
+                  }}
+                >
+                  <Text style={styles.primaryText}>
+                    I&apos;ve paid — check status
+                  </Text>
+                </Pressable>
+              ) : null}
 
               <Text style={styles.label}>My orders</Text>
               {(shopOrders ?? []).map((o) => (

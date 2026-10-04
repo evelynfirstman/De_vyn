@@ -157,12 +157,13 @@ const checkoutSchema = z.object({
 });
 
 /** Start a Flutterwave payment; stub link unless live mode is explicit. */
-async function initFlutterwavePayment(args: {
+export async function initFlutterwavePayment(args: {
   txRef: string;
   amountMajor: number;
   currency: string;
   customerName: string;
   customerEmail: string;
+  customerPhone: string;
 }): Promise<{ paymentUrl: string | null; mode: "live" | "stub" }> {
   if (env.FLUTTERWAVE_LIVE !== "true" || !env.FLUTTERWAVE_SECRET_KEY) {
     return { paymentUrl: null, mode: "stub" };
@@ -177,12 +178,81 @@ async function initFlutterwavePayment(args: {
       tx_ref: args.txRef,
       amount: args.amountMajor,
       currency: args.currency,
-      customer: { email: args.customerEmail, name: args.customerName },
+      ...(env.FLUTTERWAVE_REDIRECT_URL
+        ? { redirect_url: env.FLUTTERWAVE_REDIRECT_URL }
+        : {}),
+      customer: {
+        email: args.customerEmail,
+        name: args.customerName,
+        phonenumber: args.customerPhone,
+      },
     }),
   });
   if (!res.ok) throw new Error(`flutterwave init ${res.status}`);
   const body = (await res.json()) as { data?: { link?: string } };
   return { paymentUrl: body.data?.link ?? null, mode: "live" };
+}
+
+/**
+ * Mark a tx_ref paid from any trusted signal (webhook or verified
+ * return). Shared so both paths stay consistent. Returns what changed.
+ */
+async function confirmTxPaid(
+  txRef: string,
+  raw: unknown,
+): Promise<
+  | { kind: "payment"; orderId: number; changed: boolean }
+  | { kind: "subscription"; id: number }
+  | null
+> {
+  const found = await pool.query(
+    'SELECT id, order_id AS "orderId", status FROM payments WHERE tx_ref = $1',
+    [txRef],
+  );
+  if (found.rows.length === 0) {
+    const sub = await pool.query(
+      "SELECT id FROM subscriptions WHERE tx_ref = $1",
+      [txRef],
+    );
+    if (sub.rows.length === 0) return null;
+    const id = (sub.rows[0] as { id: number }).id;
+    await pool.query(
+      `UPDATE subscriptions SET status = 'active', started_at = COALESCE(started_at, now())
+        WHERE id = $1`,
+      [id],
+    );
+    return { kind: "subscription", id };
+  }
+  const payment = found.rows[0] as {
+    id: number;
+    orderId: number;
+    status: string;
+  };
+  if (payment.status === "paid")
+    return { kind: "payment", orderId: payment.orderId, changed: false };
+  await pool.query(
+    "UPDATE payments SET status = 'paid', raw = $2 WHERE id = $1",
+    [payment.id, JSON.stringify(raw).slice(0, 4000)],
+  );
+  await pool.query(
+    "UPDATE orders SET status = 'paid' WHERE id = $1 AND status = 'pending_payment'",
+    [payment.orderId],
+  );
+  await pool.query(
+    `INSERT INTO fulfillment_orders (order_id, provider, status)
+     VALUES ($1, 'woo-bridge', 'queued')
+     ON CONFLICT (order_id) DO NOTHING`,
+    [payment.orderId],
+  );
+  try {
+    await processFulfillment(payment.orderId);
+  } catch (err) {
+    logger.warn(
+      { err, orderId: payment.orderId },
+      "fulfillment dispatch failed",
+    );
+  }
+  return { kind: "payment", orderId: payment.orderId, changed: true };
 }
 
 shopRouter.post("/shop/checkout", async (req, res, next) => {
@@ -242,6 +312,7 @@ shopRouter.post("/shop/checkout", async (req, res, next) => {
       currency,
       customerName: body.shipping.name,
       customerEmail: body.shipping.email,
+      customerPhone: body.shipping.phone,
     });
 
     const payment = (
@@ -296,60 +367,99 @@ shopRouter.post("/shop/payments/webhook", async (req, res, next) => {
       res.json({ received: true, acted: false });
       return;
     }
-    const found = await pool.query(
-      'SELECT id, order_id AS "orderId", status FROM payments WHERE tx_ref = $1',
-      [txRef],
-    );
-    if (found.rows.length === 0) {
-      // Maybe a subscription charge: activate on tx_ref match.
-      const sub = await pool.query(
-        "SELECT id, status FROM subscriptions WHERE tx_ref = $1",
-        [txRef],
-      );
-      if (sub.rows.length === 0) {
-        res.status(404).json({
-          error: { code: "PAYMENT_NOT_FOUND", message: "Unknown tx_ref" },
-        });
-        return;
-      }
-      await pool.query(
-        `UPDATE subscriptions SET status = 'active', started_at = COALESCE(started_at, now())
-          WHERE id = $1`,
-        [(sub.rows[0] as { id: number }).id],
-      );
-      res.json({ received: true, acted: true, subscription: true });
+    const result = await confirmTxPaid(txRef, body);
+    if (result === null) {
+      res.status(404).json({
+        error: { code: "PAYMENT_NOT_FOUND", message: "Unknown tx_ref" },
+      });
       return;
     }
-    const payment = found.rows[0] as {
-      id: number;
-      orderId: number;
-      status: string;
-    };
-    if (payment.status !== "paid") {
-      await pool.query(
-        "UPDATE payments SET status = 'paid', raw = $2 WHERE id = $1",
-        [payment.id, JSON.stringify(body).slice(0, 4000)],
-      );
-      await pool.query(
-        "UPDATE orders SET status = 'paid' WHERE id = $1 AND status = 'pending_payment'",
-        [payment.orderId],
-      );
-      await pool.query(
-        `INSERT INTO fulfillment_orders (order_id, provider, status)
-         VALUES ($1, 'woo-bridge', 'queued')
-         ON CONFLICT (order_id) DO NOTHING`,
-        [payment.orderId],
-      );
+    res.json({
+      received: true,
+      acted: true,
+      ...(result.kind === "subscription" ? { subscription: true } : {}),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * Browser return page after hosted checkout. Verifies the charge with
+ * Flutterwave (live mode, via transaction_id) before confirming, then
+ * shows a plain success page telling the user to return to the app.
+ */
+shopRouter.get("/shop/payments/return", async (req, res, next) => {
+  try {
+    const txRef =
+      typeof req.query.tx_ref === "string" ? req.query.tx_ref : undefined;
+    const transactionId =
+      typeof req.query.transaction_id === "string"
+        ? req.query.transaction_id
+        : undefined;
+    const status =
+      typeof req.query.status === "string" ? req.query.status : undefined;
+    const fail = (message: string) =>
+      res
+        .status(400)
+        .send(
+          `<html><body style="font-family:sans-serif;padding:32px"><h2>Payment not confirmed</h2><p>${message}</p><p>Return to the app and use “Check status”.</p></body></html>`,
+        );
+    if (!txRef || status !== "successful") {
+      return fail("Missing or failed payment reference.");
     }
-    try {
-      await processFulfillment(payment.orderId);
-    } catch (err) {
-      logger.warn(
-        { err, orderId: payment.orderId },
-        "fulfillment dispatch failed",
+    if (env.FLUTTERWAVE_LIVE === "true" && env.FLUTTERWAVE_SECRET_KEY) {
+      if (!transactionId) return fail("Missing Flutterwave transaction id.");
+      const verify = await fetch(
+        `https://api.flutterwave.com/v3/transactions/${transactionId}/verify`,
+        {
+          headers: { Authorization: `Bearer ${env.FLUTTERWAVE_SECRET_KEY}` },
+        },
       );
+      if (!verify.ok) return fail("Could not verify with Flutterwave.");
+      const v = (await verify.json()) as {
+        data?: { status?: string; tx_ref?: string };
+      };
+      if (v.data?.status !== "successful" || v.data?.tx_ref !== txRef) {
+        return fail("Flutterwave did not confirm this payment.");
+      }
     }
-    res.json({ received: true, acted: true });
+    const result = await confirmTxPaid(txRef, {
+      via: "return-url",
+      transactionId: transactionId ?? null,
+    });
+    if (result === null) return fail("Unknown payment reference.");
+    res.send(
+      `<html><body style="font-family:sans-serif;padding:32px"><h2>✓ Payment received</h2><p>Return to the Vyn app — your order is confirmed.</p></body></html>`,
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Local payment status for app polling (tx_ref is unguessable). */
+shopRouter.get("/shop/payments/status", async (req, res, next) => {
+  try {
+    const txRef = z.string().min(1).parse(req.query.txRef);
+    const [payment, sub] = await Promise.all([
+      pool.query("SELECT status FROM payments WHERE tx_ref = $1", [txRef]),
+      pool.query("SELECT status FROM subscriptions WHERE tx_ref = $1", [txRef]),
+    ]);
+    if (payment.rows.length > 0) {
+      res.json({
+        data: { kind: "payment", status: payment.rows[0].status as string },
+      });
+      return;
+    }
+    if (sub.rows.length > 0) {
+      res.json({
+        data: { kind: "subscription", status: sub.rows[0].status as string },
+      });
+      return;
+    }
+    res.status(404).json({
+      error: { code: "PAYMENT_NOT_FOUND", message: "Unknown tx_ref" },
+    });
   } catch (err) {
     next(err);
   }
