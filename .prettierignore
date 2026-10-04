@@ -4,4 +4,5 @@ dist/
 package-lock.json
 *.md
 design.html
+docs/Vyn Therapy UI_UX/
 apps/admin/next-env.d.ts

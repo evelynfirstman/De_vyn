@@ -31,9 +31,7 @@ export function MetricPod({
     >
       <div style={{ height: 4, background: strip }} />
       <div style={{ padding: "12px 14px" }}>
-        <div
-          style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-500)" }}
-        >
+        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-500)" }}>
           {label}
         </div>
         <div style={{ fontSize: 20, fontWeight: 700, color: "var(--ink-900)" }}>
@@ -123,7 +121,10 @@ export function StreakDots({
   active?: number;
 }) {
   return (
-    <div style={{ display: "flex", gap: 6 }} aria-label={`${active} day streak`}>
+    <div
+      style={{ display: "flex", gap: 6 }}
+      aria-label={`${active} day streak`}
+    >
       {Array.from({ length: days }).map((_, i) => (
         <span
           key={i}

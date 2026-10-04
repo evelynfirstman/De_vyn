@@ -1,6 +1,7 @@
 import React from "react";
 
-export type ButtonVariant = "primary" | "secondary" | "outline" | "danger" | "kinetic";
+export type ButtonVariant =
+  "primary" | "secondary" | "outline" | "danger" | "kinetic";
 
 type ButtonProps = {
   variant?: ButtonVariant;

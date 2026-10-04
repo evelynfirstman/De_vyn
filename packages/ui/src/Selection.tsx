@@ -37,9 +37,7 @@ export function SegmentedControl<T extends string>({
                 ? "1px solid rgba(18,131,111,0.2)"
                 : "1px solid transparent",
               background: selected ? "#fff" : "transparent",
-              boxShadow: selected
-                ? "0 1px 2px rgba(16,24,40,0.06)"
-                : "none",
+              boxShadow: selected ? "0 1px 2px rgba(16,24,40,0.06)" : "none",
               borderRadius: "var(--radius)",
               padding: "8px 12px",
               minHeight: 44,

@@ -88,7 +88,15 @@ export function BottomNav({
             }}
           >
             <div style={{ fontSize: 20 }}>
-              {t === "Home" ? "⌂" : t === "Recover" ? "◉" : t === "Learn" ? "▶" : t === "Shop" ? "◈" : "▲"}
+              {t === "Home"
+                ? "⌂"
+                : t === "Recover"
+                  ? "◉"
+                  : t === "Learn"
+                    ? "▶"
+                    : t === "Shop"
+                      ? "◈"
+                      : "▲"}
             </div>
             {t}
           </button>

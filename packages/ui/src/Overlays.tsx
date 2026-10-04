@@ -94,11 +94,7 @@ export function QrScannerModal({
   );
 }
 
-export function Toast({
-  message,
-}: {
-  message: string;
-}) {
+export function Toast({ message }: { message: string }) {
   return (
     <div
       role="status"
@@ -144,7 +140,15 @@ export function OnboardingShell({
   const pct = Math.round((step / total) * 100);
   return (
     <div style={{ maxWidth: 430, margin: "0 auto", background: "#fff" }}>
-      <div style={{ padding: "12px 16px", position: "sticky", top: 0, background: "#fff", zIndex: 5 }}>
+      <div
+        style={{
+          padding: "12px 16px",
+          position: "sticky",
+          top: 0,
+          background: "#fff",
+          zIndex: 5,
+        }}
+      >
         <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-500)" }}>
           Step {step}/{total}
         </div>
@@ -161,11 +165,21 @@ export function OnboardingShell({
             overflow: "hidden",
           }}
         >
-          <div style={{ width: `${pct}%`, height: "100%", background: "var(--brand-500)" }} />
+          <div
+            style={{
+              width: `${pct}%`,
+              height: "100%",
+              background: "var(--brand-500)",
+            }}
+          />
         </div>
-        <h1 style={{ fontSize: 24, fontWeight: 700, margin: "12px 0 4px" }}>{title}</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 700, margin: "12px 0 4px" }}>
+          {title}
+        </h1>
         {subtitle ? (
-          <p style={{ fontSize: 15, color: "var(--ink-500)", margin: 0 }}>{subtitle}</p>
+          <p style={{ fontSize: 15, color: "var(--ink-500)", margin: 0 }}>
+            {subtitle}
+          </p>
         ) : null}
       </div>
       <div style={{ padding: 16 }}>{children}</div>
@@ -198,7 +212,14 @@ export function OnboardingShell({
         >
           {cta}
         </button>
-        <div style={{ textAlign: "center", fontSize: 11, color: "var(--ink-500)", marginTop: 8 }}>
+        <div
+          style={{
+            textAlign: "center",
+            fontSize: 11,
+            color: "var(--ink-500)",
+            marginTop: 8,
+          }}
+        >
           {footnote}
         </div>
       </div>
