@@ -1,6 +1,10 @@
 const path = require("path");
 
-const posix = (...parts) => path.join(...parts).split(path.sep).join("/");
+const posix = (...parts) =>
+  path
+    .join(...parts)
+    .split(path.sep)
+    .join("/");
 const mobileRoot = posix(__dirname);
 const repoRoot = posix(__dirname, "..", "..");
 

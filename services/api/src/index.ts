@@ -27,10 +27,19 @@ import { growthRouter } from "./routes/growth";
 import { gamificationRouter } from "./routes/gamification";
 import { tipsRouter } from "./routes/tips";
 import { coachRouter } from "./routes/coach";
+import { authLinkRouter } from "./routes/authLink";
+import { authHandler, requireAdmin } from "./auth-guard";
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:3000", "http://localhost:8081"],
+    credentials: true,
+  }),
+);
+// Better Auth owns its routes (and body parsing) — mount before express.json().
+app.all("/api/auth/*", authHandler);
 app.use(express.json());
 app.use((req, _res, next) => {
   logger.info({ method: req.method, url: req.url }, "request");
@@ -38,6 +47,9 @@ app.use((req, _res, next) => {
 });
 
 app.use("/health", healthRouter);
+// Admin RBAC gate: every /v1/admin/* route requires the admin role,
+// regardless of which router serves it.
+app.use("/v1/admin", requireAdmin);
 app.use("/v1", catalogRouter);
 app.use("/v1", journeyRouter);
 app.use("/v1", homeRouter);
@@ -60,6 +72,7 @@ app.use("/v1", growthRouter);
 app.use("/v1", gamificationRouter);
 app.use("/v1", tipsRouter);
 app.use("/v1", coachRouter);
+app.use("/v1", authLinkRouter);
 app.use(notFound);
 app.use(errorHandler);
 

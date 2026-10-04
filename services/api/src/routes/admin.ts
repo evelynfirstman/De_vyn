@@ -24,7 +24,12 @@ export async function logAudit(
  * Better Auth + RBAC land (Phase 2b); until then it is labeled dev.
  */
 adminRouter.use((req: Request, res: Response, next: NextFunction) => {
-  const actor = (req.header("x-admin-actor") ?? "dev-admin").slice(0, 120);
+  const authed = (req as { authUser?: { email?: string } }).authUser;
+  const actor = (
+    authed?.email ??
+    req.header("x-admin-actor") ??
+    "dev-admin"
+  ).slice(0, 120);
   res.on("finish", () => {
     // NOTE: this router sees every /v1 request (fall-through), so only
     // log actual /admin/* mutations — never user-side writes.

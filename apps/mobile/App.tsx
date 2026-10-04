@@ -859,8 +859,17 @@ export default function App() {
       setTip(tipData);
       setHistory(historyData);
       setWeekPlan(planData?.items ?? null);
-      setNotifyList(notifyData.data);
-      setHomeRecs(recData.data);
+      setNotifyList(
+        Array.isArray(notifyData)
+          ? notifyData
+          : ((notifyData as unknown as { data?: NotificationItem[] })?.data ??
+              []),
+      );
+      setHomeRecs(
+        Array.isArray(recData)
+          ? recData
+          : ((recData as unknown as { data?: ShopRec[] })?.data ?? []),
+      );
       setScreen("home");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
@@ -1308,8 +1317,8 @@ export default function App() {
     try {
       const data = (await getJson(
         `/v1/notifications?userId=${DEMO_USER_ID}`,
-      )) as { data: NotificationItem[] };
-      setNotifyList(data.data);
+      )) as unknown as NotificationItem[] | { data?: NotificationItem[] };
+      setNotifyList(Array.isArray(data) ? data : (data?.data ?? []));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
     }
@@ -1985,7 +1994,7 @@ export default function App() {
                   title={`Good day${home?.score ? ` · ${home.score.score}` : ""}`}
                   onMenu={() => setDrawerOpen(true)}
                   onBell={() => setScreen("notifications")}
-                  unread={notifyList.filter((n) => !n.read).length}
+                  unread={(notifyList ?? []).filter((n) => !n.read).length}
                 />
                 <Pressable
                   style={styles.secondary}
@@ -2791,10 +2800,10 @@ export default function App() {
             {screen === "notifications" && (
               <View>
                 <Text style={styles.label}>Notifications</Text>
-                {notifyList.length === 0 ? (
+                {(notifyList ?? []).length === 0 ? (
                   <Text style={styles.cardSub}>All caught up.</Text>
                 ) : null}
-                {notifyList.map((n) => (
+                {(notifyList ?? []).map((n) => (
                   <View key={n.id} style={styles.card}>
                     <Text style={styles.cardDay}>
                       {n.kind}
@@ -2806,7 +2815,7 @@ export default function App() {
                     ) : null}
                   </View>
                 ))}
-                {notifyList.some((n) => !n.read) ? (
+                {(notifyList ?? []).some((n) => !n.read) ? (
                   <Pressable
                     style={styles.secondary}
                     onPress={() => {

@@ -19,6 +19,8 @@ const schema = z.object({
   FLUTTERWAVE_REDIRECT_URL: z.string().default(""),
   GROQ_API_KEY: z.string().default(""),
   GROQ_MODEL: z.string().default("openai/gpt-oss-20b"),
+  BETTER_AUTH_SECRET: z.string().default("dev-secret-change-me"),
+  BETTER_AUTH_URL: z.string().default("http://localhost:4000"),
   QR_SECRET: z.string().default("dev-qr-secret"),
   WOO_URL: z.string().default(""),
   WOO_CK: z.string().default(""),
