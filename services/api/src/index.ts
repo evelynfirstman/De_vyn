@@ -26,6 +26,7 @@ import { aiRouter } from "./routes/ai";
 import { growthRouter } from "./routes/growth";
 import { gamificationRouter } from "./routes/gamification";
 import { tipsRouter } from "./routes/tips";
+import { coachRouter } from "./routes/coach";
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use("/v1", aiRouter);
 app.use("/v1", growthRouter);
 app.use("/v1", gamificationRouter);
 app.use("/v1", tipsRouter);
+app.use("/v1", coachRouter);
 app.use(notFound);
 app.use(errorHandler);
 

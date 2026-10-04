@@ -68,6 +68,8 @@ services:
       FLUTTERWAVE_PUBLIC_KEY: ${FLUTTERWAVE_PUBLIC_KEY:-}
       FLUTTERWAVE_LIVE: ${FLUTTERWAVE_LIVE:-false}
       FLUTTERWAVE_REDIRECT_URL: ${FLUTTERWAVE_REDIRECT_URL:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
     ports:
       - "4000:4000"
     depends_on:
