@@ -55,7 +55,9 @@ type Screen =
   | "wishlist"
   | "support"
   | "notifications"
-  | "coach";
+  | "coach"
+  | "cart"
+  | "checkout";
 
 type PlanItem = {
   day: string;
@@ -128,7 +130,7 @@ type LearnDetail =
 
 type Bookmark = {
   id: number;
-  kind: "article" | "video";
+  kind: "article" | "video" | "product" | "program";
   refId: number;
 };
 
@@ -231,11 +233,21 @@ type ProductDetail = {
 
 type WishlistItem = {
   id: number;
-  kind: "article" | "video" | "product";
+  kind: "article" | "video" | "product" | "program";
   refId: number;
   title: string | null;
   slug: string | null;
 };
+
+type CartItem = {
+  sku: string;
+  title: string;
+  amountMinor: number;
+  currency: string;
+  qty: number;
+};
+
+const CART_KEY = "vyn:cart";
 
 type Ticket = {
   id: number;
@@ -717,6 +729,11 @@ export default function App() {
   const [qrResult, setQrResult] = useState<string | null>(null);
   const [buyMsg, setBuyMsg] = useState<string | null>(null);
   const [pendingTx, setPendingTx] = useState<string | null>(null);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [shipName, setShipName] = useState("");
+  const [shipPhone, setShipPhone] = useState("");
+  const [shipAddress, setShipAddress] = useState("");
+  const [shipCity, setShipCity] = useState("");
   const [shopProblem, setShopProblem] = useState<string | null>(null);
 
   async function loadShopProblem(tag: string | null) {
@@ -780,7 +797,7 @@ export default function App() {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   function isBookmarked(
-    kind: "article" | "video" | "product",
+    kind: "article" | "video" | "product" | "program",
     refId: number,
   ): boolean {
     return bookmarks.some((b) => b.kind === kind && b.refId === refId);
@@ -1168,7 +1185,7 @@ export default function App() {
   }
 
   async function toggleBookmark(
-    kind: "article" | "video" | "product",
+    kind: "article" | "video" | "product" | "program",
     refId: number,
   ) {
     setError(null);
@@ -1203,42 +1220,6 @@ export default function App() {
       setShopOrders(orders.data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function buy(sku: string) {
-    setBusy(true);
-    setError(null);
-    setBuyMsg(null);
-    try {
-      const data = (await postJson("/v1/shop/checkout", {
-        userId: userId,
-        items: [{ sku, qty: 1 }],
-        shipping: {},
-      })) as {
-        order: { id: number };
-        payment: { txRef: string; paymentUrl: string | null };
-      };
-      if (data.payment.paymentUrl) {
-        setPendingTx(data.payment.txRef);
-        setBuyMsg(`Order #${data.order.id} created — completing payment…`);
-        await WebBrowser.openBrowserAsync(data.payment.paymentUrl);
-        setBuyMsg(
-          `Order #${data.order.id} — finish payment in the browser, then tap “Check status”.`,
-        );
-      } else {
-        setBuyMsg(
-          `Order #${data.order.id} created · ${data.payment.txRef} · test mode: no live payment link`,
-        );
-      }
-      const orders = (await getJson(`/v1/shop/orders?userId=${userId}`)) as {
-        data: ShopOrder[];
-      };
-      setShopOrders(orders.data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Checkout failed");
     } finally {
       setBusy(false);
     }
@@ -1299,12 +1280,110 @@ export default function App() {
   async function loadWishlist() {
     setError(null);
     try {
-      const data = (await getJson(
-        `/v1/bookmarks?userId=${userId}&kind=product`,
-      )) as { data: WishlistItem[] };
-      setWishlist(data.data);
+      const [products, programs] = await Promise.all([
+        getJson(`/v1/bookmarks?userId=${userId}&kind=product`) as Promise<{
+          data: WishlistItem[];
+        }>,
+        getJson(`/v1/bookmarks?userId=${userId}&kind=program`) as Promise<{
+          data: WishlistItem[];
+        }>,
+      ]);
+      setWishlist([...products.data, ...programs.data]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
+    }
+  }
+
+  async function persistCart(next: CartItem[]) {
+    setCart(next);
+    try {
+      await AsyncStorage.setItem(CART_KEY, JSON.stringify(next));
+    } catch {
+      // in-memory cart still works
+    }
+  }
+
+  async function loadCart() {
+    try {
+      const raw = await AsyncStorage.getItem(CART_KEY);
+      if (!raw) return;
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) setCart(parsed as CartItem[]);
+    } catch {
+      // start empty
+    }
+  }
+
+  function addToCart(item: {
+    sku: string;
+    title: string;
+    amountMinor: number;
+    currency: string;
+  }) {
+    const existing = cart.find((c) => c.sku === item.sku);
+    void persistCart(
+      existing
+        ? cart.map((c) => (c.sku === item.sku ? { ...c, qty: c.qty + 1 } : c))
+        : [...cart, { ...item, qty: 1 }],
+    );
+  }
+
+  function changeQty(sku: string, delta: number) {
+    void persistCart(
+      cart
+        .map((c) => (c.sku === sku ? { ...c, qty: c.qty + delta } : c))
+        .filter((c) => c.qty > 0),
+    );
+  }
+
+  function cartTotal(): number {
+    return cart.reduce((sum, c) => sum + c.amountMinor * c.qty, 0);
+  }
+
+  async function checkout() {
+    if (cart.length === 0) {
+      setError("Your cart is empty.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setBuyMsg(null);
+    try {
+      const data = (await postJson("/v1/shop/checkout", {
+        userId,
+        items: cart.map((c) => ({ sku: c.sku, qty: c.qty })),
+        shipping: {
+          name: shipName,
+          phone: shipPhone,
+          address: shipAddress,
+          city: shipCity,
+        },
+      })) as {
+        order: { id: number };
+        payment: { txRef: string; paymentUrl: string | null };
+      };
+      await persistCart([]);
+      if (data.payment.paymentUrl) {
+        setPendingTx(data.payment.txRef);
+        setBuyMsg(`Order #${data.order.id} created — completing payment…`);
+        await WebBrowser.openBrowserAsync(data.payment.paymentUrl);
+        setBuyMsg(
+          `Order #${data.order.id} — finish payment in the browser, then tap “Check status”.`,
+        );
+      } else {
+        setBuyMsg(
+          `Order #${data.order.id} created · test mode: no live payment link`,
+        );
+      }
+      const orders = (await getJson(`/v1/shop/orders?userId=${userId}`)) as {
+        data: ShopOrder[];
+      };
+      setShopOrders(orders.data);
+      setScreen("shop");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Checkout failed");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -1509,7 +1588,7 @@ export default function App() {
   async function loadAccountExtras() {
     setError(null);
     try {
-      const [plansRes, entRes, refRes] = await Promise.all([
+      const [plansRes, entRes, refRes, profileRes] = await Promise.all([
         getJson("/v1/subscriptions/plans") as Promise<{ data: SubPlan[] }>,
         getJson(`/v1/entitlements?userId=${userId}`) as Promise<{
           data: Entitlement;
@@ -1517,10 +1596,16 @@ export default function App() {
         getJson(`/v1/referrals?userId=${userId}`) as Promise<{
           data: ReferralInfo;
         }>,
+        getJson(`/v1/profiles/${userId}`).catch(() => null) as Promise<{
+          productsOwned?: string[];
+          occupation?: string;
+        } | null>,
       ]);
       setSubPlans(plansRes.data);
       setEntitlement(entRes.data);
       setReferral(refRes.data);
+      setProductsOwned(profileRes?.productsOwned ?? []);
+      setOccupation(profileRes?.occupation ?? "");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
     }
@@ -1664,6 +1749,7 @@ export default function App() {
 
   useEffect(() => {
     void refreshPending();
+    void loadCart();
   }, []);
 
   useEffect(() => {
@@ -1726,6 +1812,8 @@ export default function App() {
     support: "Support",
     notifications: "Notifications",
     coach: "AI Coach",
+    cart: "Cart",
+    checkout: "Checkout",
   };
 
   const tabGo = (s: Screen) => {
@@ -2325,6 +2413,17 @@ export default function App() {
             {screen === "program" && selectedProgram && (
               <View>
                 <Text style={styles.label}>{selectedProgram.title}</Text>
+                <Pressable
+                  onPress={() => {
+                    void toggleBookmark("program", selectedProgram.id);
+                  }}
+                >
+                  <Text style={styles.bookmark}>
+                    {isBookmarked("program", selectedProgram.id)
+                      ? "★ Saved"
+                      : "☆ Save program"}
+                  </Text>
+                </Pressable>
                 <Text style={styles.cardSub}>
                   {selectedProgram.description}
                 </Text>
@@ -2654,14 +2753,24 @@ export default function App() {
                   ))}
                 </View>
                 <Text style={styles.label}>Recommended for you</Text>
+                <Pressable
+                  style={styles.secondary}
+                  onPress={() => {
+                    void loadCart();
+                    setScreen("cart");
+                  }}
+                >
+                  <Text style={styles.secondaryText}>
+                    🛒 Cart ({cart.reduce((n, c) => n + c.qty, 0)})
+                  </Text>
+                </Pressable>
                 {(shopRecs ?? []).map((r) => (
-                  <Pressable
-                    key={r.sku}
-                    onPress={() => {
-                      void openProduct(r.sku);
-                    }}
-                  >
-                    <View style={styles.card}>
+                  <View key={r.sku} style={styles.card}>
+                    <Pressable
+                      onPress={() => {
+                        void openProduct(r.sku);
+                      }}
+                    >
                       <Text style={styles.cardDay}>
                         {r.isBundle ? "Bundle" : "Product"}
                         {r.matchedTags.length > 0
@@ -2676,8 +2785,21 @@ export default function App() {
                           ? ` · ${r.members.length} items`
                           : ""}
                       </Text>
-                    </View>
-                  </Pressable>
+                    </Pressable>
+                    <Pressable
+                      style={styles.secondary}
+                      onPress={() => {
+                        addToCart({
+                          sku: r.sku,
+                          title: r.title,
+                          amountMinor: r.amountMinor,
+                          currency: r.currency,
+                        });
+                      }}
+                    >
+                      <Text style={styles.secondaryText}>Add to cart</Text>
+                    </Pressable>
+                  </View>
                 ))}
                 {buyMsg ? <Text style={styles.doneMsg}>{buyMsg}</Text> : null}
                 {pendingTx ? (
@@ -2829,14 +2951,16 @@ export default function App() {
                 <Pressable
                   style={styles.primary}
                   onPress={() => {
-                    void (async () => {
-                      await buy(product.sku);
-                      setScreen("shop");
-                    })();
+                    addToCart({
+                      sku: product.sku,
+                      title: product.title,
+                      amountMinor: product.amountMinor,
+                      currency: product.currency,
+                    });
+                    setScreen("cart");
                   }}
-                  disabled={busy}
                 >
-                  <Text style={styles.primaryText}>{busy ? "…" : "Buy"}</Text>
+                  <Text style={styles.primaryText}>Add to cart</Text>
                 </Pressable>
                 <Pressable
                   style={styles.secondary}
@@ -2850,22 +2974,43 @@ export default function App() {
             {screen === "wishlist" && (
               <View>
                 <Text style={styles.label}>Saved products</Text>
-                {wishlist.length === 0 ? (
+                {wishlist.filter((w) => w.kind === "product").length === 0 ? (
                   <Text style={styles.cardSub}>
                     Nothing saved yet — tap ☆ on any product.
                   </Text>
                 ) : null}
-                {wishlist.map((w) => (
-                  <Pressable
-                    key={w.id}
-                    style={styles.card}
-                    onPress={() => {
-                      void openProduct(w.slug ?? "");
-                    }}
-                  >
-                    <Text style={styles.cardTitle}>{w.title ?? w.slug}</Text>
-                  </Pressable>
-                ))}
+                {wishlist
+                  .filter((w) => w.kind === "product")
+                  .map((w) => (
+                    <Pressable
+                      key={w.id}
+                      style={styles.card}
+                      onPress={() => {
+                        void openProduct(w.slug ?? "");
+                      }}
+                    >
+                      <Text style={styles.cardTitle}>{w.title ?? w.slug}</Text>
+                    </Pressable>
+                  ))}
+                <Text style={styles.label}>Saved programs</Text>
+                {wishlist.filter((w) => w.kind === "program").length === 0 ? (
+                  <Text style={styles.cardSub}>
+                    Nothing saved yet — tap ☆ on any program.
+                  </Text>
+                ) : null}
+                {wishlist
+                  .filter((w) => w.kind === "program")
+                  .map((w) => (
+                    <Pressable
+                      key={w.id}
+                      style={styles.card}
+                      onPress={() => {
+                        void openProgram(w.slug ?? "");
+                      }}
+                    >
+                      <Text style={styles.cardTitle}>{w.title ?? w.slug}</Text>
+                    </Pressable>
+                  ))}
                 <Pressable
                   style={styles.secondary}
                   onPress={() => setScreen("shop")}
@@ -3014,6 +3159,141 @@ export default function App() {
               </View>
             )}
 
+            {screen === "cart" && (
+              <View>
+                <Text style={styles.label}>Your cart</Text>
+                {cart.length === 0 ? (
+                  <Text style={styles.cardSub}>
+                    Empty — add recovery gear from Shop.
+                  </Text>
+                ) : null}
+                {cart.map((c) => (
+                  <View key={c.sku} style={styles.card}>
+                    <Text style={styles.cardTitle}>{c.title}</Text>
+                    <Text style={styles.cardSub}>
+                      {c.currency === "NGN" ? "₦" : `${c.currency} `}
+                      {(c.amountMinor / 100).toLocaleString()} each
+                    </Text>
+                    <View style={styles.row}>
+                      <View style={styles.stepper}>
+                        <Pressable
+                          style={styles.stepBtn}
+                          onPress={() => changeQty(c.sku, -1)}
+                        >
+                          <Text style={styles.stepText}>−</Text>
+                        </Pressable>
+                        <Text style={styles.stepValue}>{c.qty}</Text>
+                        <Pressable
+                          style={styles.stepBtn}
+                          onPress={() => changeQty(c.sku, 1)}
+                        >
+                          <Text style={styles.stepText}>+</Text>
+                        </Pressable>
+                      </View>
+                      <Pressable onPress={() => changeQty(c.sku, -c.qty)}>
+                        <Text style={styles.goalDelete}>Remove</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ))}
+                {cart.length > 0 ? (
+                  <View>
+                    <Text style={styles.cardTitle}>
+                      Total: ₦{cartTotal().toLocaleString()}
+                    </Text>
+                    <Pressable
+                      style={styles.primary}
+                      onPress={() => setScreen("checkout")}
+                    >
+                      <Text style={styles.primaryText}>Checkout</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+                <Pressable
+                  style={styles.secondary}
+                  onPress={() => setScreen("shop")}
+                >
+                  <Text style={styles.secondaryText}>Back to Shop</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {screen === "checkout" && (
+              <View>
+                <Text style={styles.label}>Delivery details</Text>
+                <TextInput
+                  style={styles.input}
+                  value={shipName}
+                  onChangeText={setShipName}
+                  placeholder="Full name"
+                  placeholderTextColor={colors.ink[500]}
+                />
+                <TextInput
+                  style={styles.input}
+                  value={shipPhone}
+                  onChangeText={setShipPhone}
+                  placeholder="Phone"
+                  placeholderTextColor={colors.ink[500]}
+                  keyboardType="phone-pad"
+                />
+                <TextInput
+                  style={styles.input}
+                  value={shipAddress}
+                  onChangeText={setShipAddress}
+                  placeholder="Street address"
+                  placeholderTextColor={colors.ink[500]}
+                />
+                <TextInput
+                  style={styles.input}
+                  value={shipCity}
+                  onChangeText={setShipCity}
+                  placeholder="City"
+                  placeholderTextColor={colors.ink[500]}
+                />
+                <Text style={styles.label}>Order review</Text>
+                {cart.map((c) => (
+                  <Text key={c.sku} style={styles.cardSub}>
+                    {c.title} ×{c.qty} — ₦
+                    {((c.amountMinor * c.qty) / 100).toLocaleString()}
+                  </Text>
+                ))}
+                <Text style={styles.cardTitle}>
+                  Total: ₦{cartTotal().toLocaleString()}
+                </Text>
+                {buyMsg ? <Text style={styles.doneMsg}>{buyMsg}</Text> : null}
+                {pendingTx ? (
+                  <Pressable
+                    style={styles.primary}
+                    onPress={() => {
+                      void checkPayment(pendingTx);
+                    }}
+                  >
+                    <Text style={styles.primaryText}>
+                      I&apos;ve paid — check status
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    style={styles.primary}
+                    onPress={() => {
+                      void checkout();
+                    }}
+                    disabled={busy || cart.length === 0}
+                  >
+                    <Text style={styles.primaryText}>
+                      {busy ? "Creating order…" : "Pay with Flutterwave"}
+                    </Text>
+                  </Pressable>
+                )}
+                <Pressable
+                  style={styles.secondary}
+                  onPress={() => setScreen("cart")}
+                >
+                  <Text style={styles.secondaryText}>Back to Cart</Text>
+                </Pressable>
+              </View>
+            )}
+
             {screen === "progress" && (
               <View>
                 <Text style={styles.label}>Score history</Text>
@@ -3126,6 +3406,15 @@ export default function App() {
 
             {screen === "account" && (
               <View>
+                <Text style={styles.label}>About you</Text>
+                <View style={styles.card}>
+                  <Text style={styles.cardSub}>
+                    {occupation || "Occupation not set"} · Gear:{" "}
+                    {productsOwned.length > 0
+                      ? productsOwned.join(", ")
+                      : "none listed"}
+                  </Text>
+                </View>
                 <Text style={styles.label}>Notifications</Text>
                 {(notifications ?? []).slice(0, 5).map((n) => (
                   <View key={n.id} style={styles.card}>

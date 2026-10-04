@@ -70,13 +70,22 @@ learnRouter.get("/videos/:slug", async (req, res, next) => {
 
 const bookmarkSchema = z.object({
   userId: z.number().int().positive(),
-  kind: z.enum(["article", "video", "product"]),
+  kind: z.enum(["article", "video", "product", "program"]),
   refId: z.number().int().positive(),
 });
 
-async function refExists(kind: "article" | "video" | "product", refId: number) {
+async function refExists(
+  kind: "article" | "video" | "product" | "program",
+  refId: number,
+) {
   const table =
-    kind === "article" ? "articles" : kind === "video" ? "videos" : "products";
+    kind === "article"
+      ? "articles"
+      : kind === "video"
+        ? "videos"
+        : kind === "product"
+          ? "products"
+          : "programs";
   const { rows } = await pool.query(`SELECT id FROM ${table} WHERE id = $1`, [
     refId,
   ]);
@@ -89,7 +98,9 @@ learnRouter.get("/bookmarks", async (req, res, next) => {
     const kind =
       req.query.kind === undefined
         ? undefined
-        : z.enum(["article", "video", "product"]).parse(req.query.kind);
+        : z
+            .enum(["article", "video", "product", "program"])
+            .parse(req.query.kind);
     const params: (number | string)[] = [userId];
     const clause =
       kind === undefined
@@ -99,12 +110,13 @@ learnRouter.get("/bookmarks", async (req, res, next) => {
     const { rows } = await pool.query(
       `SELECT b.id, b.user_id AS "userId", b.kind,
               b.ref_id AS "refId", b.created_at AS "createdAt",
-              COALESCE(a.title, v.title, p.title) AS title,
-              COALESCE(a.slug, v.slug, p.sku) AS slug
+              COALESCE(a.title, v.title, p.title, pr.title) AS title,
+              COALESCE(a.slug, v.slug, p.sku, pr.slug) AS slug
          FROM bookmarks b
          LEFT JOIN articles a ON a.id = b.ref_id AND b.kind = 'article'
          LEFT JOIN videos v ON v.id = b.ref_id AND b.kind = 'video'
          LEFT JOIN products p ON p.id = b.ref_id AND b.kind = 'product'
+         LEFT JOIN programs pr ON pr.id = b.ref_id AND b.kind = 'program'
         ${clause} ORDER BY b.created_at DESC`,
       params,
     );
