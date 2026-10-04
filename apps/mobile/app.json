@@ -12,6 +12,10 @@
     "android": {
       "package": "com.vyntherapy.app"
     },
-    "plugins": ["expo-web-browser"]
+    "plugins": [
+      "expo-web-browser",
+      "expo-font",
+      "expo-secure-store"
+    ]
   }
 }
