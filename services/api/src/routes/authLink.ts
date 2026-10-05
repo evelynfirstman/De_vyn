@@ -14,7 +14,9 @@ authLinkRouter.post("/auth/link", async (req, res, next) => {
     const body = z
       .object({
         email: z.string().email(),
-        name: z.string().min(1).max(120).default(""),
+        // Optional: sign-in screens don't collect a name, so empty/missing
+        // must link (not 400). Existing rows keep their stored name.
+        name: z.string().max(120).default(""),
       })
       .parse(req.body);
     const email = body.email.toLowerCase();

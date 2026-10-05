@@ -1423,7 +1423,7 @@ export default function App() {
       }
       const linked = (await postJson("/v1/auth/link", {
         email,
-        name: authName.trim(),
+        name: authName.trim() || "Vyn User",
       })) as { appUserId: number };
       setAppUserId(linked.appUserId);
       setAuthPassword("");
