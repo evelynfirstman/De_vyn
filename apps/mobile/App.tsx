@@ -1444,486 +1444,482 @@ export default function App() {
   return (
     <AppErrorBoundary>
       <View style={styles.shell}>
-          <ScrollView
-            contentContainerStyle={styles.page}
-            style={styles.scroller}
-          >
-            <Text style={styles.title}>Vyn Therapy</Text>
-            <Text style={styles.step}>{STEP_TITLES[screen]}</Text>
+        <ScrollView contentContainerStyle={styles.page} style={styles.scroller}>
+          <Text style={styles.title}>Vyn Therapy</Text>
+          <Text style={styles.step}>{STEP_TITLES[screen]}</Text>
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
-            {screen === "splash" && <SplashScreen />}
+          {screen === "splash" && <SplashScreen />}
 
-            {screen === "welcome" && (
-              <WelcomeScreen
-                mode={authMode}
-                name={authName}
-                email={authEmail}
-                password={authPassword}
-                busy={busy}
-                onMode={setAuthMode}
-                onName={setAuthName}
-                onEmail={setAuthEmail}
-                onPassword={setAuthPassword}
-                onSubmit={() => {
-                  void submitAuth();
-                }}
-              />
-            )}
+          {screen === "welcome" && (
+            <WelcomeScreen
+              mode={authMode}
+              name={authName}
+              email={authEmail}
+              password={authPassword}
+              busy={busy}
+              onMode={setAuthMode}
+              onName={setAuthName}
+              onEmail={setAuthEmail}
+              onPassword={setAuthPassword}
+              onSubmit={() => {
+                void submitAuth();
+              }}
+            />
+          )}
 
-            {screen === "about" && (
-              <AboutScreen
-                occupation={occupation}
-                activityLevel={activityLevel}
-                onOccupation={setOccupation}
-                onActivityLevel={setActivityLevel}
-                onContinue={() => setScreen("owned")}
-              />
-            )}
+          {screen === "about" && (
+            <AboutScreen
+              occupation={occupation}
+              activityLevel={activityLevel}
+              onOccupation={setOccupation}
+              onActivityLevel={setActivityLevel}
+              onContinue={() => setScreen("owned")}
+            />
+          )}
 
-            {screen === "owned" && (
-              <OwnedScreen
-                options={ownedOptions}
-                owned={productsOwned}
-                onToggle={(sku) =>
-                  setProductsOwned(
-                    productsOwned.includes(sku)
-                      ? productsOwned.filter((x) => x !== sku)
-                      : [...productsOwned, sku],
-                  )
+          {screen === "owned" && (
+            <OwnedScreen
+              options={ownedOptions}
+              owned={productsOwned}
+              onToggle={(sku) =>
+                setProductsOwned(
+                  productsOwned.includes(sku)
+                    ? productsOwned.filter((x) => x !== sku)
+                    : [...productsOwned, sku],
+                )
+              }
+              onContinue={() => setScreen("profile")}
+            />
+          )}
+
+          {screen === "profile" && (
+            <ProfileScreen
+              goals={goals}
+              painAreas={painAreas}
+              minutes={minutes}
+              days={days}
+              busy={busy}
+              onToggleGoal={(g) => toggle(goals, g, setGoals)}
+              onTogglePain={(p) => toggle(painAreas, p, setPainAreas)}
+              onMinutes={setMinutes}
+              onDays={setDays}
+              onContinue={() => {
+                void saveProfile();
+              }}
+            />
+          )}
+
+          {screen === "assessment" && (
+            <AssessmentScreen
+              soreness={soreness}
+              sleep={sleep}
+              stress={stress}
+              busy={busy}
+              onSoreness={setSoreness}
+              onSleep={setSleep}
+              onStress={setStress}
+              onSubmit={() => {
+                void saveAssessment();
+              }}
+            />
+          )}
+
+          {screen === "plan" && plan && (
+            <PlanScreen
+              plan={plan}
+              explanation={explanation}
+              busy={busy}
+              onExplain={() => {
+                void loadExplanation(plan.id);
+              }}
+              onOpenHome={() => {
+                void openHome();
+              }}
+              onStartOver={() => setScreen("profile")}
+            />
+          )}
+
+          {screen === "home" && (
+            <HomeScreen
+              home={home}
+              tip={tip}
+              homeRecs={homeRecs}
+              weekPlan={weekPlan}
+              history={history}
+              unread={(notifyList ?? []).filter((n) => !n.read).length}
+              soreness={soreness}
+              sleep={sleep}
+              stress={stress}
+              busy={busy}
+              onMenu={() => setDrawerOpen(true)}
+              onBell={() => setScreen("notifications")}
+              onCoach={() => setScreen("coach")}
+              onSoreness={setSoreness}
+              onSleep={setSleep}
+              onStress={setStress}
+              onSubmitCheckIn={() => {
+                void submitCheckIn();
+              }}
+              onStartSession={(slug) => {
+                void openProgram(slug);
+              }}
+              onOpenProduct={(sku) => {
+                void openProduct(sku);
+              }}
+            />
+          )}
+
+          {screen === "recover" && (
+            <RecoverScreen
+              programs={programs}
+              activeTag={recoverTag}
+              pendingCount={pendingCount}
+              loading={busy}
+              onSelectTag={setRecoverTag}
+              onOpenProgram={(slug) => {
+                void openProgram(slug);
+              }}
+              onBack={() => setScreen("home")}
+            />
+          )}
+
+          {screen === "program" && selectedProgram && (
+            <ProgramScreen
+              program={selectedProgram}
+              stepIdx={stepIdx}
+              secondsLeft={secondsLeft}
+              timerOn={timerOn}
+              finished={finished}
+              busy={busy}
+              doneMsg={doneMsg}
+              saved={isBookmarked("program", selectedProgram.id)}
+              onToggleSave={() => {
+                void toggleBookmark("program", selectedProgram.id);
+              }}
+              onToggleTimer={() => setTimerOn(!timerOn)}
+              onSkipStep={skipStep}
+              onFinish={() => setScreen("feedback")}
+              onAllPrograms={() => {
+                setTimerOn(false);
+                setScreen("recover");
+              }}
+            />
+          )}
+
+          {screen === "feedback" && (
+            <FeedbackScreen
+              rating={rating}
+              feedback={feedback}
+              busy={busy}
+              onRating={setRating}
+              onFeedback={setFeedback}
+              onSubmit={() => {
+                void completeSession();
+              }}
+            />
+          )}
+
+          {screen === "done" && (
+            <DoneScreen
+              doneMsg={doneMsg}
+              lastGain={lastGain}
+              home={home}
+              onHome={() => setScreen("home")}
+              onProgress={() => setScreen("progress")}
+            />
+          )}
+
+          {screen === "learn" && (
+            <LearnScreen
+              related={related}
+              items={learnItems}
+              category={learnCat}
+              tab={learnTab}
+              isBookmarked={isBookmarked}
+              onOpenDetail={(kind, slug) => {
+                void openLearnDetail(kind, slug);
+              }}
+              onSelectCategory={setLearnCat}
+              onSelectTab={(t) => {
+                setLearnItems(null);
+                void loadLearnScreen(t);
+              }}
+              onToggleBookmark={(kind, id) => {
+                void toggleBookmark(kind, id);
+              }}
+              onBack={() => setScreen("home")}
+            />
+          )}
+
+          {screen === "learnDetail" && learnDetail && (
+            <LearnDetailScreen
+              detail={learnDetail}
+              relProgs={learnRelProgs}
+              relProds={learnRelProds}
+              isBookmarked={isBookmarked}
+              onToggleBookmark={(kind, id) => {
+                void toggleBookmark(kind, id);
+              }}
+              onOpenProgram={(slug) => {
+                void openProgram(slug);
+              }}
+              onOpenProduct={(sku) => {
+                void openProduct(sku);
+              }}
+              onBack={() => setScreen("learn")}
+            />
+          )}
+
+          {screen === "shop" && (
+            <ShopScreen
+              recs={shopRecs}
+              orders={shopOrders}
+              activeProblem={shopProblem}
+              cartCount={cart.reduce((n, c) => n + c.qty, 0)}
+              buyMsg={buyMsg}
+              pendingTx={pendingTx}
+              qrInput={qrInput}
+              qrResult={qrResult}
+              onForMe={() => {
+                void loadShopScreen();
+                setShopProblem(null);
+              }}
+              onProblemTag={(tag) => {
+                void loadShopProblem(tag);
+              }}
+              onCollectionTag={(tag) => {
+                void loadShopProblem(tag);
+              }}
+              onOpenCart={() => {
+                void loadCart();
+                setScreen("cart");
+              }}
+              onOpenProduct={(sku) => {
+                void openProduct(sku);
+              }}
+              onAddToCart={(item) => addToCart(item)}
+              onCheckPayment={() => {
+                if (pendingTx) void checkPayment(pendingTx);
+              }}
+              onScanQr={() => setQrOpen(true)}
+              onQrInput={setQrInput}
+              onResolveQr={() => {
+                void submitQr();
+              }}
+              onBack={() => setScreen("home")}
+            />
+          )}
+
+          {screen === "product" && product && (
+            <ProductScreen
+              product={product}
+              onOpenGuide={(kind, slug) => {
+                void openLearnDetail(kind, slug);
+              }}
+              onOpenProgram={(slug) => {
+                void openProgram(slug);
+              }}
+              onOpenProduct={(sku) => {
+                void openProduct(sku);
+              }}
+              onAddToCart={() => {
+                addToCart({
+                  sku: product.sku,
+                  title: product.title,
+                  amountMinor: product.amountMinor,
+                  currency: product.currency,
+                });
+                setScreen("cart");
+              }}
+              onBack={() => setScreen("shop")}
+            />
+          )}
+
+          {screen === "wishlist" && (
+            <WishlistScreen
+              items={wishlist}
+              onOpenProduct={(slug) => {
+                void openProduct(slug);
+              }}
+              onOpenProgram={(slug) => {
+                void openProgram(slug);
+              }}
+              onBack={() => setScreen("shop")}
+            />
+          )}
+
+          {screen === "support" && (
+            <SupportScreen
+              subject={ticketSubject}
+              message={ticketMessage}
+              tickets={tickets}
+              onSubject={setTicketSubject}
+              onMessage={setTicketMessage}
+              onSubmit={() => {
+                void submitTicket();
+              }}
+              onBack={() => setScreen("account")}
+            />
+          )}
+
+          {screen === "notifications" && (
+            <NotificationsScreen
+              items={notifyList ?? []}
+              onMarkAllRead={() => {
+                void markAllRead();
+              }}
+              onBack={() => setScreen("home")}
+            />
+          )}
+
+          {screen === "coach" && (
+            <CoachScreen
+              chat={chat}
+              input={chatInput}
+              busy={chatBusy}
+              onInput={setChatInput}
+              onSend={() => {
+                void sendChat();
+              }}
+              onBack={() => setScreen("home")}
+            />
+          )}
+
+          {screen === "cart" && (
+            <CartScreen
+              cart={cart}
+              totalMinor={cartTotal()}
+              onChangeQty={(sku, delta) => changeQty(sku, delta)}
+              onRemove={(sku) => changeQty(sku, -9999)}
+              onCheckout={() => setScreen("checkout")}
+              onBack={() => setScreen("shop")}
+            />
+          )}
+
+          {screen === "checkout" && (
+            <CheckoutScreen
+              cart={cart}
+              totalMinor={cartTotal()}
+              shipping={{
+                name: shipName,
+                phone: shipPhone,
+                address: shipAddress,
+                city: shipCity,
+              }}
+              busy={busy}
+              buyMsg={buyMsg}
+              pendingTx={pendingTx}
+              onShipping={(patch) => {
+                if (patch.name !== undefined) setShipName(patch.name);
+                if (patch.phone !== undefined) setShipPhone(patch.phone);
+                if (patch.address !== undefined) setShipAddress(patch.address);
+                if (patch.city !== undefined) setShipCity(patch.city);
+              }}
+              onPay={() => {
+                void checkout();
+              }}
+              onCheckPayment={() => {
+                if (pendingTx) void checkPayment(pendingTx);
+              }}
+              onBack={() => setScreen("cart")}
+            />
+          )}
+
+          {screen === "progress" && (
+            <ProgressScreen
+              progress={progress}
+              game={game}
+              recs={recs}
+              onLoadGame={() => {
+                void loadGame();
+              }}
+              onOpenRec={openRec}
+              onBack={() => setScreen("home")}
+            />
+          )}
+
+          {screen === "account" && (
+            <AccountScreen
+              occupation={occupation}
+              productsOwned={productsOwned}
+              notifications={notifications}
+              goalList={goalList}
+              newGoal={newGoal}
+              shopOrders={shopOrders}
+              entitlement={entitlement}
+              subPlans={subPlans}
+              referral={referral}
+              redeemInput={redeemInput}
+              redeemMsg={redeemMsg}
+              promos={promos}
+              reminders={reminders}
+              reminderTime={reminderTime}
+              confirmDelete={confirmDelete}
+              onMarkAllRead={() => {
+                void markAllRead();
+              }}
+              onToggleGoal={(g) => {
+                void toggleGoal(g);
+              }}
+              onRemoveGoal={(id) => {
+                void removeGoal(id);
+              }}
+              onNewGoal={setNewGoal}
+              onAddGoal={() => {
+                void addGoal();
+              }}
+              onLoadPlans={() => {
+                void loadAccountExtras();
+              }}
+              onSubscribe={(id) => {
+                void subscribe(id);
+              }}
+              onEnsureReferral={() => {
+                void ensureReferralCode();
+              }}
+              onRedeemInput={setRedeemInput}
+              onRedeem={() => {
+                void redeemReferral();
+              }}
+              onTogglePromos={() => {
+                void togglePromos();
+              }}
+              onToggleReminders={() => {
+                void toggleReminders();
+              }}
+              onReminderTime={setReminderTime}
+              onSaveReminderTime={() => {
+                void saveReminderTime();
+              }}
+              onDeleteData={() => {
+                if (confirmDelete) {
+                  void deleteMyData();
+                } else {
+                  setConfirmDelete(true);
                 }
-                onContinue={() => setScreen("profile")}
-              />
-            )}
-
-            {screen === "profile" && (
-              <ProfileScreen
-                goals={goals}
-                painAreas={painAreas}
-                minutes={minutes}
-                days={days}
-                busy={busy}
-                onToggleGoal={(g) => toggle(goals, g, setGoals)}
-                onTogglePain={(p) => toggle(painAreas, p, setPainAreas)}
-                onMinutes={setMinutes}
-                onDays={setDays}
-                onContinue={() => {
-                  void saveProfile();
-                }}
-              />
-            )}
-
-            {screen === "assessment" && (
-              <AssessmentScreen
-                soreness={soreness}
-                sleep={sleep}
-                stress={stress}
-                busy={busy}
-                onSoreness={setSoreness}
-                onSleep={setSleep}
-                onStress={setStress}
-                onSubmit={() => {
-                  void saveAssessment();
-                }}
-              />
-            )}
-
-            {screen === "plan" && plan && (
-              <PlanScreen
-                plan={plan}
-                explanation={explanation}
-                busy={busy}
-                onExplain={() => {
-                  void loadExplanation(plan.id);
-                }}
-                onOpenHome={() => {
-                  void openHome();
-                }}
-                onStartOver={() => setScreen("profile")}
-              />
-            )}
-
-            {screen === "home" && (
-              <HomeScreen
-                home={home}
-                tip={tip}
-                homeRecs={homeRecs}
-                weekPlan={weekPlan}
-                history={history}
-                unread={(notifyList ?? []).filter((n) => !n.read).length}
-                soreness={soreness}
-                sleep={sleep}
-                stress={stress}
-                busy={busy}
-                onMenu={() => setDrawerOpen(true)}
-                onBell={() => setScreen("notifications")}
-                onCoach={() => setScreen("coach")}
-                onSoreness={setSoreness}
-                onSleep={setSleep}
-                onStress={setStress}
-                onSubmitCheckIn={() => {
-                  void submitCheckIn();
-                }}
-                onStartSession={(slug) => {
-                  void openProgram(slug);
-                }}
-                onOpenProduct={(sku) => {
-                  void openProduct(sku);
-                }}
-              />
-            )}
-
-            {screen === "recover" && (
-              <RecoverScreen
-                programs={programs}
-                activeTag={recoverTag}
-                pendingCount={pendingCount}
-                loading={busy}
-                onSelectTag={setRecoverTag}
-                onOpenProgram={(slug) => {
-                  void openProgram(slug);
-                }}
-                onBack={() => setScreen("home")}
-              />
-            )}
-
-            {screen === "program" && selectedProgram && (
-              <ProgramScreen
-                program={selectedProgram}
-                stepIdx={stepIdx}
-                secondsLeft={secondsLeft}
-                timerOn={timerOn}
-                finished={finished}
-                busy={busy}
-                doneMsg={doneMsg}
-                saved={isBookmarked("program", selectedProgram.id)}
-                onToggleSave={() => {
-                  void toggleBookmark("program", selectedProgram.id);
-                }}
-                onToggleTimer={() => setTimerOn(!timerOn)}
-                onSkipStep={skipStep}
-                onFinish={() => setScreen("feedback")}
-                onAllPrograms={() => {
-                  setTimerOn(false);
-                  setScreen("recover");
-                }}
-              />
-            )}
-
-            {screen === "feedback" && (
-              <FeedbackScreen
-                rating={rating}
-                feedback={feedback}
-                busy={busy}
-                onRating={setRating}
-                onFeedback={setFeedback}
-                onSubmit={() => {
-                  void completeSession();
-                }}
-              />
-            )}
-
-            {screen === "done" && (
-              <DoneScreen
-                doneMsg={doneMsg}
-                lastGain={lastGain}
-                home={home}
-                onHome={() => setScreen("home")}
-                onProgress={() => setScreen("progress")}
-              />
-            )}
-
-            {screen === "learn" && (
-              <LearnScreen
-                related={related}
-                items={learnItems}
-                category={learnCat}
-                tab={learnTab}
-                isBookmarked={isBookmarked}
-                onOpenDetail={(kind, slug) => {
-                  void openLearnDetail(kind, slug);
-                }}
-                onSelectCategory={setLearnCat}
-                onSelectTab={(t) => {
-                  setLearnItems(null);
-                  void loadLearnScreen(t);
-                }}
-                onToggleBookmark={(kind, id) => {
-                  void toggleBookmark(kind, id);
-                }}
-                onBack={() => setScreen("home")}
-              />
-            )}
-
-            {screen === "learnDetail" && learnDetail && (
-              <LearnDetailScreen
-                detail={learnDetail}
-                relProgs={learnRelProgs}
-                relProds={learnRelProds}
-                isBookmarked={isBookmarked}
-                onToggleBookmark={(kind, id) => {
-                  void toggleBookmark(kind, id);
-                }}
-                onOpenProgram={(slug) => {
-                  void openProgram(slug);
-                }}
-                onOpenProduct={(sku) => {
-                  void openProduct(sku);
-                }}
-                onBack={() => setScreen("learn")}
-              />
-            )}
-
-            {screen === "shop" && (
-              <ShopScreen
-                recs={shopRecs}
-                orders={shopOrders}
-                activeProblem={shopProblem}
-                cartCount={cart.reduce((n, c) => n + c.qty, 0)}
-                buyMsg={buyMsg}
-                pendingTx={pendingTx}
-                qrInput={qrInput}
-                qrResult={qrResult}
-                onForMe={() => {
-                  void loadShopScreen();
-                  setShopProblem(null);
-                }}
-                onProblemTag={(tag) => {
-                  void loadShopProblem(tag);
-                }}
-                onCollectionTag={(tag) => {
-                  void loadShopProblem(tag);
-                }}
-                onOpenCart={() => {
-                  void loadCart();
-                  setScreen("cart");
-                }}
-                onOpenProduct={(sku) => {
-                  void openProduct(sku);
-                }}
-                onAddToCart={(item) => addToCart(item)}
-                onCheckPayment={() => {
-                  if (pendingTx) void checkPayment(pendingTx);
-                }}
-                onScanQr={() => setQrOpen(true)}
-                onQrInput={setQrInput}
-                onResolveQr={() => {
-                  void submitQr();
-                }}
-                onBack={() => setScreen("home")}
-              />
-            )}
-
-            {screen === "product" && product && (
-              <ProductScreen
-                product={product}
-                onOpenGuide={(kind, slug) => {
-                  void openLearnDetail(kind, slug);
-                }}
-                onOpenProgram={(slug) => {
-                  void openProgram(slug);
-                }}
-                onOpenProduct={(sku) => {
-                  void openProduct(sku);
-                }}
-                onAddToCart={() => {
-                  addToCart({
-                    sku: product.sku,
-                    title: product.title,
-                    amountMinor: product.amountMinor,
-                    currency: product.currency,
-                  });
-                  setScreen("cart");
-                }}
-                onBack={() => setScreen("shop")}
-              />
-            )}
-
-            {screen === "wishlist" && (
-              <WishlistScreen
-                items={wishlist}
-                onOpenProduct={(slug) => {
-                  void openProduct(slug);
-                }}
-                onOpenProgram={(slug) => {
-                  void openProgram(slug);
-                }}
-                onBack={() => setScreen("shop")}
-              />
-            )}
-
-            {screen === "support" && (
-              <SupportScreen
-                subject={ticketSubject}
-                message={ticketMessage}
-                tickets={tickets}
-                onSubject={setTicketSubject}
-                onMessage={setTicketMessage}
-                onSubmit={() => {
-                  void submitTicket();
-                }}
-                onBack={() => setScreen("account")}
-              />
-            )}
-
-            {screen === "notifications" && (
-              <NotificationsScreen
-                items={notifyList ?? []}
-                onMarkAllRead={() => {
-                  void markAllRead();
-                }}
-                onBack={() => setScreen("home")}
-              />
-            )}
-
-            {screen === "coach" && (
-              <CoachScreen
-                chat={chat}
-                input={chatInput}
-                busy={chatBusy}
-                onInput={setChatInput}
-                onSend={() => {
-                  void sendChat();
-                }}
-                onBack={() => setScreen("home")}
-              />
-            )}
-
-            {screen === "cart" && (
-              <CartScreen
-                cart={cart}
-                totalMinor={cartTotal()}
-                onChangeQty={(sku, delta) => changeQty(sku, delta)}
-                onRemove={(sku) => changeQty(sku, -9999)}
-                onCheckout={() => setScreen("checkout")}
-                onBack={() => setScreen("shop")}
-              />
-            )}
-
-            {screen === "checkout" && (
-              <CheckoutScreen
-                cart={cart}
-                totalMinor={cartTotal()}
-                shipping={{
-                  name: shipName,
-                  phone: shipPhone,
-                  address: shipAddress,
-                  city: shipCity,
-                }}
-                busy={busy}
-                buyMsg={buyMsg}
-                pendingTx={pendingTx}
-                onShipping={(patch) => {
-                  if (patch.name !== undefined) setShipName(patch.name);
-                  if (patch.phone !== undefined) setShipPhone(patch.phone);
-                  if (patch.address !== undefined)
-                    setShipAddress(patch.address);
-                  if (patch.city !== undefined) setShipCity(patch.city);
-                }}
-                onPay={() => {
-                  void checkout();
-                }}
-                onCheckPayment={() => {
-                  if (pendingTx) void checkPayment(pendingTx);
-                }}
-                onBack={() => setScreen("cart")}
-              />
-            )}
-
-            {screen === "progress" && (
-              <ProgressScreen
-                progress={progress}
-                game={game}
-                recs={recs}
-                onLoadGame={() => {
-                  void loadGame();
-                }}
-                onOpenRec={openRec}
-                onBack={() => setScreen("home")}
-              />
-            )}
-
-            {screen === "account" && (
-              <AccountScreen
-                occupation={occupation}
-                productsOwned={productsOwned}
-                notifications={notifications}
-                goalList={goalList}
-                newGoal={newGoal}
-                shopOrders={shopOrders}
-                entitlement={entitlement}
-                subPlans={subPlans}
-                referral={referral}
-                redeemInput={redeemInput}
-                redeemMsg={redeemMsg}
-                promos={promos}
-                reminders={reminders}
-                reminderTime={reminderTime}
-                confirmDelete={confirmDelete}
-                onMarkAllRead={() => {
-                  void markAllRead();
-                }}
-                onToggleGoal={(g) => {
-                  void toggleGoal(g);
-                }}
-                onRemoveGoal={(id) => {
-                  void removeGoal(id);
-                }}
-                onNewGoal={setNewGoal}
-                onAddGoal={() => {
-                  void addGoal();
-                }}
-                onLoadPlans={() => {
-                  void loadAccountExtras();
-                }}
-                onSubscribe={(id) => {
-                  void subscribe(id);
-                }}
-                onEnsureReferral={() => {
-                  void ensureReferralCode();
-                }}
-                onRedeemInput={setRedeemInput}
-                onRedeem={() => {
-                  void redeemReferral();
-                }}
-                onTogglePromos={() => {
-                  void togglePromos();
-                }}
-                onToggleReminders={() => {
-                  void toggleReminders();
-                }}
-                onReminderTime={setReminderTime}
-                onSaveReminderTime={() => {
-                  void saveReminderTime();
-                }}
-                onDeleteData={() => {
-                  if (confirmDelete) {
-                    void deleteMyData();
-                  } else {
-                    setConfirmDelete(true);
-                  }
-                }}
-                onBack={() => setScreen("home")}
-              />
-            )}
-          </ScrollView>
-          <TabBar screen={screen} onGo={tabGo} />
-          <QrScannerModal
-            visible={qrOpen}
-            onClose={() => setQrOpen(false)}
-            onSimulate={() => {
-              setQrOpen(false);
-              setQrInput("VYN1-DEMOQR1234");
-            }}
-          />
-          <Drawer
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            onGo={tabGo}
-            onSignOut={signOut}
-          />
-        </View>
+              }}
+              onBack={() => setScreen("home")}
+            />
+          )}
+        </ScrollView>
+        <TabBar screen={screen} onGo={tabGo} />
+        <QrScannerModal
+          visible={qrOpen}
+          onClose={() => setQrOpen(false)}
+          onSimulate={() => {
+            setQrOpen(false);
+            setQrInput("VYN1-DEMOQR1234");
+          }}
+        />
+        <Drawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          onGo={tabGo}
+          onSignOut={signOut}
+        />
+      </View>
     </AppErrorBoundary>
   );
 }
