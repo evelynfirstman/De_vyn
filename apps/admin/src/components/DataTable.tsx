@@ -22,7 +22,8 @@ export function DataTable({
   rows: Record<string, unknown>[];
   empty?: string;
 }) {
-  if (rows.length === 0)
+  const safeRows = rows ?? [];
+  if (safeRows.length === 0)
     return <p style={{ color: "var(--ink-500)" }}>{empty}</p>;
   return (
     <div
@@ -46,7 +47,7 @@ export function DataTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
+          {safeRows.map((row, i) => (
             <tr key={i} style={{ borderTop: "1px solid var(--ink-100)" }}>
               {columns.map((c) => (
                 <td

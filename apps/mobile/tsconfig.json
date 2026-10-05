@@ -11,6 +11,12 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["App.tsx"],
+  "include": [
+    "App.tsx",
+    "src/**/*",
+    "components/**/*",
+    "theme.ts",
+    "nativewind-env.d.ts"
+  ],
   "extends": "expo/tsconfig.base"
 }

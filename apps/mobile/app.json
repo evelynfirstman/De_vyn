@@ -6,16 +6,16 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "newArchEnabled": true,
+    "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.vyntherapy.app"
     },
     "android": {
       "package": "com.vyntherapy.app"
     },
-    "plugins": [
-      "expo-web-browser",
-      "expo-font",
-      "expo-secure-store"
-    ]
+    "plugins": ["expo-web-browser", "expo-font", "expo-secure-store"],
+    "web": {
+      "bundler": "metro"
+    }
   }
 }

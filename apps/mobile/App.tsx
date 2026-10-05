@@ -1,23 +1,8 @@
 import React, { useEffect, useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { colors, scoreBandFor } from "@vyn/tokens";
-import { bandColor, fontFamily } from "./theme";
-import {
-  Logo,
-  OnboardingProgress,
-  QrScannerModal,
-  RoutineHeroCard,
-  ScoreRing,
-  StreakDots,
-  StreakPill,
-} from "./components/RNUI";
+import "./global.css";
+import { Pressable, ScrollView, Text, View } from "react-native";
+import { styles } from "./src/styles";
+import { QrScannerModal } from "./components/RNUI";
 import { useFonts } from "expo-font";
 import {
   PlusJakartaSans_400Regular,
@@ -28,446 +13,75 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
 import { authClient } from "./src/auth-client";
-
-// Signed-in app user (set after Better Auth + /v1/auth/link).
-// Screens that need it only render once linked; 0 fails API validation.
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:4000";
-
-type Screen =
-  | "splash"
-  | "welcome"
-  | "about"
-  | "owned"
-  | "profile"
-  | "assessment"
-  | "plan"
-  | "home"
-  | "recover"
-  | "program"
-  | "feedback"
-  | "done"
-  | "learn"
-  | "learnDetail"
-  | "shop"
-  | "product"
-  | "progress"
-  | "account"
-  | "wishlist"
-  | "support"
-  | "notifications"
-  | "coach"
-  | "cart"
-  | "checkout";
-
-type PlanItem = {
-  day: string;
-  programId: number;
-  slug: string;
-  title: string;
-  durationMin: number;
-};
-
-type Plan = {
-  id: number;
-  items: PlanItem[];
-  rationale: string;
-};
-
-type HomeData = {
-  date: string;
-  weekday: string;
-  todaySession: {
-    day: string;
-    title: string;
-    durationMin: number;
-    slug: string;
-  } | null;
-  score: { score: number; band: string } | null;
-  streak: { count: number; lastDate: string | null };
-  checkIn: { soreness: number; sleepHours: string; stress: number } | null;
-};
-
-type LearnItem = {
-  kind: "article" | "video";
-  id: number;
-  slug: string;
-  title: string;
-  subtitle: string;
-  category: string;
-  matchedTags: string[];
-};
-
-type LearnListItem = {
-  id: number;
-  slug: string;
-  title: string;
-  sub: string;
-  category: string;
-};
-
-type LearnDetail =
-  | {
-      kind: "article";
-      id: number;
-      slug: string;
-      title: string;
-      excerpt: string;
-      body: string;
-      category: string;
-      tags: string[];
-    }
-  | {
-      kind: "video";
-      id: number;
-      slug: string;
-      title: string;
-      description: string;
-      durationSec: number;
-      playbackUrl: string | null;
-      category: string;
-      tags: string[];
-    };
-
-type Bookmark = {
-  id: number;
-  kind: "article" | "video" | "product" | "program";
-  refId: number;
-};
-
-type ShopRec = {
-  sku: string;
-  title: string;
-  amountMinor: number;
-  currency: string;
-  isBundle: boolean;
-  members: { sku: string; qty: number }[];
-  matchedTags: string[];
-  score: number;
-};
-
-type ShopOrder = {
-  id: number;
-  status: string;
-  amountMinor: number;
-  currency: string;
-  items: { sku: string; title: string; qty: number; unitMinor: number }[];
-  paymentStatus: string | null;
-  txRef: string | null;
-  fulfillmentStatus: string | null;
-  bridgeRef: string | null;
-};
-
-type Goal = {
-  id: number;
-  title: string;
-  targetPerWeek: number;
-  done: boolean;
-};
-
-type NotificationItem = {
-  id: number;
-  kind: string;
-  title: string;
-  body: string;
-  read: boolean;
-};
-
-type ProgressData = {
-  scores: { date: string; score: number; band: string }[];
-  completionsByDay: { date: string; count: number }[];
-  streak: { count: number; lastDate: string | null };
-  milestones: { kind: string; label: string; achievedAt: string }[];
-};
-
-type Rec = {
-  kind: string;
-  title: string;
-  reason: string;
-  action: { screen: string; slug?: string };
-};
-
-type Explanation = {
-  summary: string;
-  reasons: string[];
-  sources: { title: string; source: string }[];
-  disclaimer: string;
-  escalation: string;
-};
-
-type SubPlan = {
-  id: number;
-  name: string;
-  amountMinor: number;
-  currency: string;
-  interval: string;
-};
-
-type Entitlement = {
-  premium: boolean;
-  subscription: { planName: string; status: string } | null;
-};
-
-type ReferralInfo = {
-  mine: { code: string; status: string }[];
-  referredBy: { code: string }[];
-};
-
-type ProductDetail = {
-  id: number;
-  sku: string;
-  title: string;
-  amountMinor: number;
-  currency: string;
-  isBundle: boolean;
-  problemTags: string[];
-  guides: { kind: string; id: number; slug: string; title: string }[];
-  routines: { id: number; slug: string; title: string; duration_min: number }[];
-  related: {
-    sku: string;
-    title: string;
-    amountMinor: number;
-    currency: string;
-  }[];
-  members: { sku: string; title: string | null; qty: number }[];
-};
-
-type WishlistItem = {
-  id: number;
-  kind: "article" | "video" | "product" | "program";
-  refId: number;
-  title: string | null;
-  slug: string | null;
-};
-
-type CartItem = {
-  sku: string;
-  title: string;
-  amountMinor: number;
-  currency: string;
-  qty: number;
-};
-
-const CART_KEY = "vyn:cart";
-
-type Ticket = {
-  id: number;
-  subject: string;
-  message: string;
-  status: string;
-};
-
-type GameState = {
-  xp: number;
-  level: number;
-  xpToNext: number;
-  badges: { id: string; title: string; earned: boolean }[];
-  challenges: {
-    id: string;
-    title: string;
-    target: number;
-    progress: number;
-    done: boolean;
-  }[];
-};
-
-type DailyTip = {
-  title: string;
-  body: string;
-  source: string;
-};
-
-type HistoryItem = {
-  programId: number;
-  completedAt: string;
-};
-
-type ChatMsg = {
-  role: "user" | "assistant";
-  content: string;
-  sources?: { title: string; source: string }[];
-};
-
-function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-type ProgramStep = {
-  name: string;
-  seconds: number;
-};
-
-type Program = {
-  id: number;
-  slug: string;
-  title: string;
-  description: string;
-  level: string;
-  duration_min: number;
-  steps: ProgramStep[];
-  equipment: string[];
-  problemTags: string[];
-};
-
-type QueuedCompletion = {
-  userId: number;
-  programId: number;
-  durationSec: number;
-  queuedAt: string;
-};
-
-const QUEUE_KEY = "vyn:pending-completions";
-
-async function readQueue(): Promise<QueuedCompletion[]> {
-  try {
-    const raw = await AsyncStorage.getItem(QUEUE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as QueuedCompletion[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-/** Push queued completions to the API; stops at first failure (offline). */
-async function flushQueue(): Promise<number> {
-  const queue = await readQueue();
-  let sent = 0;
-  for (let i = 0; i < queue.length; i++) {
-    const item = queue[i];
-    try {
-      await postJson("/v1/sessions/complete", {
-        userId: item.userId,
-        programId: item.programId,
-        durationSec: item.durationSec,
-      });
-      sent += 1;
-    } catch {
-      await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue.slice(i)));
-      return sent;
-    }
-  }
-  await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify([]));
-  return sent;
-}
-
-const GOAL_OPTIONS = [
-  "Neck relief",
-  "Back relief",
-  "Better posture",
-  "Move daily",
-];
-const PAIN_OPTIONS = ["neck", "lower-back", "shoulders", "posture"];
-
-async function authHeaders(): Promise<Record<string, string>> {
-  try {
-    const cookies = await authClient.getCookie();
-    return cookies ? { Cookie: cookies } : {};
-  } catch {
-    return {};
-  }
-}
-
-async function postJson(path: string, body: unknown) {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
-    credentials: "omit",
-    body: JSON.stringify(body),
-  });
-  const json = (await res.json()) as {
-    data?: unknown;
-    error?: { message: string };
-  };
-  if (!res.ok)
-    throw new Error(json.error?.message ?? `Request failed (${res.status})`);
-  return json.data;
-}
-
-async function getJson(path: string) {
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: { ...(await authHeaders()) },
-    credentials: "omit",
-  });
-  const json = (await res.json()) as {
-    data?: unknown;
-    error?: { message: string };
-  };
-  if (!res.ok)
-    throw new Error(json.error?.message ?? `Request failed (${res.status})`);
-  return json.data;
-}
-
-async function putJson(path: string, body: unknown) {
-  const res = await fetch(`${API_URL}${path}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
-    credentials: "omit",
-    body: JSON.stringify(body),
-  });
-  const json = (await res.json()) as {
-    data?: unknown;
-    error?: { message: string };
-  };
-  if (!res.ok)
-    throw new Error(json.error?.message ?? `Request failed (${res.status})`);
-  return json.data;
-}
-
-function Chip({
-  label,
-  selected,
-  onToggle,
-}: {
-  label: string;
-  selected: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onToggle}
-      style={[styles.chip, selected && styles.chipSelected]}
-    >
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-function NumberRow({
-  label,
-  value,
-  min,
-  max,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.stepper}>
-        <Pressable
-          style={styles.stepBtn}
-          onPress={() => onChange(Math.max(min, value - 1))}
-        >
-          <Text style={styles.stepText}>−</Text>
-        </Pressable>
-        <Text style={styles.stepValue}>{value}</Text>
-        <Pressable
-          style={styles.stepBtn}
-          onPress={() => onChange(Math.min(max, value + 1))}
-        >
-          <Text style={styles.stepText}>+</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
+import { NotificationsScreen } from "./src/screens/Notifications";
+import { HomeScreen } from "./src/screens/Home";
+import { RecoverScreen } from "./src/screens/Recover";
+import { LearnDetailScreen, LearnScreen } from "./src/screens/Learn";
+import { ShopScreen } from "./src/screens/Shop";
+import { ProductScreen } from "./src/screens/Product";
+import { CartScreen } from "./src/screens/Cart";
+import { CheckoutScreen } from "./src/screens/Checkout";
+import { WishlistScreen } from "./src/screens/Wishlist";
+import { ProgressScreen } from "./src/screens/Progress";
+import { SupportScreen } from "./src/screens/Support";
+import { CoachScreen } from "./src/screens/Coach";
+import { AccountScreen } from "./src/screens/Account";
+import {
+  DoneScreen,
+  FeedbackScreen,
+  ProgramScreen,
+} from "./src/screens/Session";
+import {
+  AboutScreen,
+  AssessmentScreen,
+  OwnedScreen,
+  PlanScreen,
+  ProfileScreen,
+  SplashScreen,
+  WelcomeScreen,
+} from "./src/screens/Onboarding";
+import type {
+  Bookmark,
+  CartItem,
+  ChatMsg,
+  DailyTip,
+  Entitlement,
+  Explanation,
+  GameState,
+  Goal,
+  HistoryItem,
+  HomeData,
+  LearnDetail,
+  LearnItem,
+  LearnListItem,
+  NotificationItem,
+  Plan,
+  PlanItem,
+  ProductDetail,
+  Program,
+  ProgressData,
+  Rec,
+  ReferralInfo,
+  Screen,
+  ShopOrder,
+  ShopRec,
+  SubPlan,
+  Ticket,
+  WishlistItem,
+} from "./src/types";
+import {
+  CART_KEY,
+  QUEUE_KEY,
+  delJson,
+  flushQueue,
+  getJson,
+  postJson,
+  putJson,
+  readQueue,
+  todayStr,
+  unwrap,
+  unwrapArray,
+} from "./src/api";
 
 const TABS: { screen: Screen; label: string; icon: string }[] = [
   { screen: "home", label: "Home", icon: "⌂" },
@@ -475,21 +89,6 @@ const TABS: { screen: Screen; label: string; icon: string }[] = [
   { screen: "learn", label: "Learn", icon: "▶" },
   { screen: "shop", label: "Shop", icon: "◈" },
   { screen: "progress", label: "Progress", icon: "▲" },
-];
-
-const MOODS = [
-  { value: 1, emoji: "😁", label: "Great" },
-  { value: 2, emoji: "🙂", label: "Good" },
-  { value: 3, emoji: "😐", label: "Okay" },
-  { value: 4, emoji: "😣", label: "Sore" },
-  { value: 5, emoji: "😫", label: "Very sore" },
-];
-
-const ACTIVITY_LEVELS = [
-  "Mostly sitting",
-  "Lightly active",
-  "Active",
-  "Very active",
 ];
 
 class AppErrorBoundary extends React.Component<
@@ -516,32 +115,6 @@ class AppErrorBoundary extends React.Component<
     return this.props.children;
   }
 }
-
-const PROBLEM_CHIPS = [
-  { label: "Neck pain", tag: "neck" },
-  { label: "Back pain", tag: "lower-back" },
-  { label: "Shoulders", tag: "shoulders" },
-  { label: "Posture", tag: "posture" },
-];
-
-const COLLECTIONS = [
-  { label: "For Developers", tag: "neck" },
-  { label: "For Remote Workers", tag: "posture" },
-  { label: "For Travelers", tag: "lower-back" },
-  { label: "For Gym Recovery", tag: "sitting" },
-];
-
-const LEARN_CATEGORIES = [
-  "All",
-  "Recovery Basics",
-  "Desk Health",
-  "Mobility",
-  "Sleep",
-  "Hydration",
-  "Stress",
-  "Posture",
-  "Product Guides",
-];
 
 function TabBar({
   screen,
@@ -637,42 +210,10 @@ function Drawer({
   );
 }
 
-function AppHeader({
-  title,
-  onMenu,
-  onBell,
-  unread,
-}: {
-  title: string;
-  onMenu?: () => void;
-  onBell?: () => void;
-  unread?: number;
-}) {
-  return (
-    <View style={styles.header}>
-      {onMenu ? (
-        <Pressable style={styles.headerBtn} onPress={onMenu}>
-          <Text style={styles.headerIcon}>☰</Text>
-        </Pressable>
-      ) : (
-        <View style={styles.headerBtn} />
-      )}
-      <Text style={styles.headerTitle}>{title}</Text>
-      {onBell ? (
-        <Pressable style={styles.headerBtn} onPress={onBell}>
-          <Text style={styles.headerIcon}>
-            🔔{unread ? ` (${unread})` : ""}
-          </Text>
-        </Pressable>
-      ) : (
-        <View style={styles.headerBtn} />
-      )}
-    </View>
-  );
-}
-
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  // Fonts load async and swap in when ready — never gate rendering on them,
+  // otherwise a stalled font fetch leaves a blank page with no error.
+  useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_600SemiBold,
     PlusJakartaSans_700Bold,
@@ -744,8 +285,9 @@ export default function App() {
         tag === null
           ? `/v1/shop/recommendations?userId=${userId}`
           : `/v1/shop/recommendations?problem=${encodeURIComponent(tag)}`;
-      const data = (await getJson(url)) as { data: ShopRec[] };
-      setShopRecs(data.data);
+      const data = (await getJson(url)) as unknown as
+        ShopRec[] | { data?: ShopRec[] };
+      setShopRecs(unwrapArray<ShopRec>(data));
       setShopProblem(tag);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
@@ -902,15 +444,15 @@ export default function App() {
       setHistory(historyData);
       setWeekPlan(planData?.items ?? null);
       setNotifyList(
-        Array.isArray(notifyData)
-          ? notifyData
-          : ((notifyData as unknown as { data?: NotificationItem[] })?.data ??
-              []),
+        unwrapArray<NotificationItem>(
+          notifyData as unknown as
+            NotificationItem[] | { data?: NotificationItem[] },
+        ),
       );
       setHomeRecs(
-        Array.isArray(recData)
-          ? recData
-          : ((recData as unknown as { data?: ShopRec[] })?.data ?? []),
+        unwrapArray<ShopRec>(
+          recData as unknown as ShopRec[] | { data?: ShopRec[] },
+        ),
       );
       setScreen("home");
     } catch (e) {
@@ -957,23 +499,6 @@ export default function App() {
     }
   }
 
-  async function delJson(path: string, body: unknown) {
-    const res = await fetch(`${API_URL}${path}`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
-      credentials: "omit",
-      body: JSON.stringify(body),
-    });
-    if (res.status === 204) return null;
-    const json = (await res.json()) as {
-      data?: unknown;
-      error?: { message: string };
-    };
-    if (!res.ok)
-      throw new Error(json.error?.message ?? `Request failed (${res.status})`);
-    return json.data;
-  }
-
   async function refreshPending() {
     setPendingCount((await readQueue()).length);
   }
@@ -982,10 +507,9 @@ export default function App() {
     setBusy(true);
     setError(null);
     try {
-      const data = (await getJson("/v1/programs?pageSize=50")) as {
-        data: Program[];
-      };
-      setPrograms(data.data);
+      const data = (await getJson("/v1/programs?pageSize=50")) as unknown as
+        Program[] | { data?: Program[] };
+      setPrograms(unwrapArray<Program>(data));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
     } finally {
@@ -1082,26 +606,28 @@ export default function App() {
     setBusy(true);
     setError(null);
     try {
+      type LearnRow = {
+        id: number;
+        slug: string;
+        title: string;
+        excerpt?: string;
+        description?: string;
+        category: string;
+      };
       const [itemsRes, relatedRes, bookmarkRes] = await Promise.all([
-        getJson(`/v1/${tab}?pageSize=50`) as Promise<{
-          data: {
-            id: number;
-            slug: string;
-            title: string;
-            excerpt?: string;
-            description?: string;
-            category: string;
-          }[];
-        }>,
-        getJson(`/v1/learn/related?userId=${userId}`) as Promise<{
-          data: LearnItem[];
-        }>,
-        getJson(`/v1/bookmarks?userId=${userId}`) as Promise<{
-          data: Bookmark[];
-        }>,
+        getJson(`/v1/${tab}?pageSize=50`) as Promise<
+          LearnRow[] | { data?: LearnRow[] }
+        >,
+        getJson(`/v1/learn/related?userId=${userId}`) as Promise<
+          LearnItem[] | { data?: LearnItem[] }
+        >,
+        getJson(`/v1/bookmarks?userId=${userId}`) as Promise<
+          Bookmark[] | { data?: Bookmark[] }
+        >,
       ]);
+      const rows = unwrapArray<LearnRow>(itemsRes);
       setLearnItems(
-        itemsRes.data.map((r) => ({
+        rows.map((r) => ({
           id: r.id,
           slug: r.slug,
           title: r.title,
@@ -1110,8 +636,8 @@ export default function App() {
         })),
       );
       setLearnTab(tab);
-      setRelated(relatedRes.data);
-      setBookmarks(bookmarkRes.data);
+      setRelated(unwrapArray<LearnItem>(relatedRes));
+      setBookmarks(unwrapArray<Bookmark>(bookmarkRes));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
     } finally {
@@ -1127,16 +653,18 @@ export default function App() {
     }
     try {
       const [progs, prods] = await Promise.all([
-        getJson(`/v1/programs?tags=${tags.join(",")}&pageSize=3`) as Promise<{
-          data: { slug: string; title: string }[];
-        }>,
-        getJson("/v1/products?pageSize=50") as Promise<{
-          data: { sku: string; title: string; problem_tags?: string[] }[];
-        }>,
+        getJson(`/v1/programs?tags=${tags.join(",")}&pageSize=3`) as Promise<
+          | { slug: string; title: string }[]
+          | { data?: { slug: string; title: string }[] }
+        >,
+        getJson("/v1/products?pageSize=50") as Promise<
+          | { sku: string; title: string; problem_tags?: string[] }[]
+          | { data?: { sku: string; title: string; problem_tags?: string[] }[] }
+        >,
       ]);
-      setLearnRelProgs(progs.data);
+      setLearnRelProgs(unwrapArray(progs));
       setLearnRelProds(
-        prods.data
+        unwrapArray(prods)
           .filter((p) => (p.problem_tags ?? []).some((t) => tags.includes(t)))
           .slice(0, 3),
       );
@@ -1195,10 +723,10 @@ export default function App() {
       } else {
         await postJson("/v1/bookmarks", { userId: userId, kind, refId });
       }
-      const data = (await getJson(`/v1/bookmarks?userId=${userId}`)) as {
-        data: Bookmark[];
-      };
-      setBookmarks(data.data);
+      const data = (await getJson(
+        `/v1/bookmarks?userId=${userId}`,
+      )) as unknown as Bookmark[] | { data?: Bookmark[] };
+      setBookmarks(unwrapArray<Bookmark>(data));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Bookmark failed");
     }
@@ -1209,15 +737,15 @@ export default function App() {
     setError(null);
     try {
       const [recs, orders] = await Promise.all([
-        getJson(`/v1/shop/recommendations?userId=${userId}`) as Promise<{
-          data: ShopRec[];
-        }>,
-        getJson(`/v1/shop/orders?userId=${userId}`) as Promise<{
-          data: ShopOrder[];
-        }>,
+        getJson(`/v1/shop/recommendations?userId=${userId}`) as Promise<
+          ShopRec[] | { data?: ShopRec[] }
+        >,
+        getJson(`/v1/shop/orders?userId=${userId}`) as Promise<
+          ShopOrder[] | { data?: ShopOrder[] }
+        >,
       ]);
-      setShopRecs(recs.data);
-      setShopOrders(orders.data);
+      setShopRecs(unwrapArray<ShopRec>(recs));
+      setShopOrders(unwrapArray<ShopOrder>(orders));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
     } finally {
@@ -1234,10 +762,10 @@ export default function App() {
       if (data.status === "paid" || data.status === "active") {
         setPendingTx(null);
         setBuyMsg("Payment confirmed ✓ — order is on its way.");
-        const orders = (await getJson(`/v1/shop/orders?userId=${userId}`)) as {
-          data: ShopOrder[];
-        };
-        setShopOrders(orders.data);
+        const orders = (await getJson(
+          `/v1/shop/orders?userId=${userId}`,
+        )) as unknown as ShopOrder[] | { data?: ShopOrder[] };
+        setShopOrders(unwrapArray<ShopOrder>(orders));
       } else {
         setBuyMsg(`Still ${data.status} — finish payment, then check again.`);
       }
@@ -1281,14 +809,17 @@ export default function App() {
     setError(null);
     try {
       const [products, programs] = await Promise.all([
-        getJson(`/v1/bookmarks?userId=${userId}&kind=product`) as Promise<{
-          data: WishlistItem[];
-        }>,
-        getJson(`/v1/bookmarks?userId=${userId}&kind=program`) as Promise<{
-          data: WishlistItem[];
-        }>,
+        getJson(`/v1/bookmarks?userId=${userId}&kind=product`) as Promise<
+          WishlistItem[] | { data?: WishlistItem[] }
+        >,
+        getJson(`/v1/bookmarks?userId=${userId}&kind=program`) as Promise<
+          WishlistItem[] | { data?: WishlistItem[] }
+        >,
       ]);
-      setWishlist([...products.data, ...programs.data]);
+      setWishlist([
+        ...unwrapArray<WishlistItem>(products),
+        ...unwrapArray<WishlistItem>(programs),
+      ]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
     }
@@ -1390,10 +921,10 @@ export default function App() {
   async function loadTickets() {
     setError(null);
     try {
-      const data = (await getJson(`/v1/tickets?userId=${userId}`)) as {
-        data: Ticket[];
-      };
-      setTickets(data.data);
+      const data = (await getJson(
+        `/v1/tickets?userId=${userId}`,
+      )) as unknown as Ticket[] | { data?: Ticket[] };
+      setTickets(unwrapArray<Ticket>(data));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
     }
@@ -1423,7 +954,7 @@ export default function App() {
       const data = (await getJson(
         `/v1/notifications?userId=${userId}`,
       )) as unknown as NotificationItem[] | { data?: NotificationItem[] };
-      setNotifyList(Array.isArray(data) ? data : (data?.data ?? []));
+      setNotifyList(unwrapArray<NotificationItem>(data));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
     }
@@ -1431,10 +962,10 @@ export default function App() {
 
   async function loadGame() {
     try {
-      const data = (await getJson(`/v1/gamification?userId=${userId}`)) as {
-        data: GameState;
-      };
-      setGame(data.data);
+      const data = (await getJson(
+        `/v1/gamification?userId=${userId}`,
+      )) as unknown as GameState | { data?: GameState };
+      setGame(unwrap<GameState | null>(data, null));
     } catch {
       setGame(null);
     }
@@ -1446,27 +977,31 @@ export default function App() {
     try {
       const [progressRes, recsRes, goalsRes, notifRes, ordersRes] =
         await Promise.all([
-          getJson(`/v1/progress?userId=${userId}`) as Promise<{
-            data: ProgressData;
-          }>,
-          getJson(`/v1/recommendations?userId=${userId}`) as Promise<{
-            data: Rec[];
-          }>,
-          getJson(`/v1/goals?userId=${userId}`) as Promise<{
-            data: Goal[];
-          }>,
-          getJson(`/v1/notifications?userId=${userId}`) as Promise<{
-            data: NotificationItem[];
-          }>,
-          getJson(`/v1/shop/orders?userId=${userId}`) as Promise<{
-            data: ShopOrder[];
-          }>,
+          getJson(`/v1/progress?userId=${userId}`) as Promise<
+            ProgressData | { data?: ProgressData }
+          >,
+          getJson(`/v1/recommendations?userId=${userId}`) as Promise<
+            Rec[] | { data?: Rec[] }
+          >,
+          getJson(`/v1/goals?userId=${userId}`) as Promise<
+            Goal[] | { data?: Goal[] }
+          >,
+          getJson(`/v1/notifications?userId=${userId}`) as Promise<
+            NotificationItem[] | { data?: NotificationItem[] }
+          >,
+          getJson(`/v1/shop/orders?userId=${userId}`) as Promise<
+            ShopOrder[] | { data?: ShopOrder[] }
+          >,
         ]);
-      setProgress(progressRes.data);
-      setRecs(recsRes.data);
-      setGoalList(goalsRes.data);
-      setNotifications(notifRes.data);
-      setShopOrders(ordersRes.data);
+      const prog = unwrap<ProgressData | null>(
+        progressRes as ProgressData | { data?: ProgressData },
+        null,
+      );
+      setProgress(prog);
+      setRecs(unwrapArray<Rec>(recsRes));
+      setGoalList(unwrapArray<Goal>(goalsRes));
+      setNotifications(unwrapArray<NotificationItem>(notifRes));
+      setShopOrders(unwrapArray<ShopOrder>(ordersRes));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Load failed");
     } finally {
@@ -1481,10 +1016,9 @@ export default function App() {
     try {
       await postJson("/v1/goals", { userId: userId, title });
       setNewGoal("");
-      const data = (await getJson(`/v1/goals?userId=${userId}`)) as {
-        data: Goal[];
-      };
-      setGoalList(data.data);
+      const data = (await getJson(`/v1/goals?userId=${userId}`)) as unknown as
+        Goal[] | { data?: Goal[] };
+      setGoalList(unwrapArray<Goal>(data));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Add failed");
     }
@@ -1523,10 +1057,12 @@ export default function App() {
     setError(null);
     try {
       await postJson("/v1/notifications/read", { userId: userId });
-      const data = (await getJson(`/v1/notifications?userId=${userId}`)) as {
-        data: NotificationItem[];
-      };
-      setNotifications(data.data);
+      const data = (await getJson(
+        `/v1/notifications?userId=${userId}`,
+      )) as unknown as NotificationItem[] | { data?: NotificationItem[] };
+      const items = unwrapArray<NotificationItem>(data);
+      setNotifications(items);
+      setNotifyList(items);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Update failed");
     }
@@ -1589,21 +1125,33 @@ export default function App() {
     setError(null);
     try {
       const [plansRes, entRes, refRes, profileRes] = await Promise.all([
-        getJson("/v1/subscriptions/plans") as Promise<{ data: SubPlan[] }>,
-        getJson(`/v1/entitlements?userId=${userId}`) as Promise<{
-          data: Entitlement;
-        }>,
-        getJson(`/v1/referrals?userId=${userId}`) as Promise<{
-          data: ReferralInfo;
-        }>,
+        getJson("/v1/subscriptions/plans") as Promise<
+          SubPlan[] | { data?: SubPlan[] }
+        >,
+        getJson(`/v1/entitlements?userId=${userId}`) as Promise<
+          Entitlement | { data?: Entitlement }
+        >,
+        getJson(`/v1/referrals?userId=${userId}`) as Promise<
+          ReferralInfo | { data?: ReferralInfo }
+        >,
         getJson(`/v1/profiles/${userId}`).catch(() => null) as Promise<{
           productsOwned?: string[];
           occupation?: string;
         } | null>,
       ]);
-      setSubPlans(plansRes.data);
-      setEntitlement(entRes.data);
-      setReferral(refRes.data);
+      setSubPlans(unwrapArray<SubPlan>(plansRes));
+      setEntitlement(
+        unwrap<Entitlement | null>(
+          entRes as Entitlement | { data?: Entitlement },
+          null,
+        ),
+      );
+      setReferral(
+        unwrap<ReferralInfo | null>(
+          refRes as ReferralInfo | { data?: ReferralInfo },
+          null,
+        ),
+      );
       setProductsOwned(profileRes?.productsOwned ?? []);
       setOccupation(profileRes?.occupation ?? "");
     } catch (e) {
@@ -1622,10 +1170,10 @@ export default function App() {
         setPendingTx(data.txRef);
         await WebBrowser.openBrowserAsync(data.paymentUrl);
       }
-      const ent = (await getJson(`/v1/entitlements?userId=${userId}`)) as {
-        data: Entitlement;
-      };
-      setEntitlement(ent.data);
+      const ent = (await getJson(
+        `/v1/entitlements?userId=${userId}`,
+      )) as unknown as Entitlement | { data?: Entitlement };
+      setEntitlement(unwrap<Entitlement | null>(ent, null));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Subscribe failed");
     }
@@ -1635,10 +1183,10 @@ export default function App() {
     setError(null);
     try {
       await postJson("/v1/referrals", { userId: userId });
-      const ref = (await getJson(`/v1/referrals?userId=${userId}`)) as {
-        data: ReferralInfo;
-      };
-      setReferral(ref.data);
+      const ref = (await getJson(
+        `/v1/referrals?userId=${userId}`,
+      )) as unknown as ReferralInfo | { data?: ReferralInfo };
+      setReferral(unwrap<ReferralInfo | null>(ref, null));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Referral failed");
     }
@@ -1895,8 +1443,7 @@ export default function App() {
 
   return (
     <AppErrorBoundary>
-      {fontsLoaded ? (
-        <View style={styles.shell}>
+      <View style={styles.shell}>
           <ScrollView
             contentContainerStyle={styles.page}
             style={styles.scroller}
@@ -1906,1727 +1453,459 @@ export default function App() {
 
             {error ? <Text style={styles.error}>{error}</Text> : null}
 
-            {screen === "splash" && (
-              <View style={styles.splashWrap}>
-                <Logo size={112} />
-                <Text style={styles.splashTitle}>Vyn Therapy</Text>
-                <Text style={styles.splashTag}>
-                  Your daily recovery companion
-                </Text>
-                <View style={styles.splashLoader}>
-                  <View style={styles.splashLoaderFill} />
-                </View>
-              </View>
-            )}
+            {screen === "splash" && <SplashScreen />}
 
             {screen === "welcome" && (
-              <View>
-                <Text style={styles.label}>Recover smarter, every day</Text>
-                <Text style={styles.cardSub}>
-                  Personalized plans, guided sessions and curated products for
-                  desk-based bodies — in 5 to 15 minutes a day.
-                </Text>
-                <View style={styles.chips}>
-                  <Chip
-                    label="Create account"
-                    selected={authMode === "up"}
-                    onToggle={() => setAuthMode("up")}
-                  />
-                  <Chip
-                    label="Sign in"
-                    selected={authMode === "in"}
-                    onToggle={() => setAuthMode("in")}
-                  />
-                </View>
-                {authMode === "up" ? (
-                  <TextInput
-                    style={styles.input}
-                    value={authName}
-                    onChangeText={setAuthName}
-                    placeholder="Name"
-                    placeholderTextColor={colors.ink[500]}
-                  />
-                ) : null}
-                <TextInput
-                  style={styles.input}
-                  value={authEmail}
-                  onChangeText={setAuthEmail}
-                  placeholder="Email"
-                  placeholderTextColor={colors.ink[500]}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-                <TextInput
-                  style={styles.input}
-                  value={authPassword}
-                  onChangeText={setAuthPassword}
-                  placeholder="Password (8+ characters)"
-                  placeholderTextColor={colors.ink[500]}
-                  secureTextEntry
-                />
-                <Pressable
-                  style={styles.primary}
-                  onPress={() => {
-                    void submitAuth();
-                  }}
-                  disabled={busy}
-                >
-                  <Text style={styles.primaryText}>
-                    {busy
-                      ? "Please wait…"
-                      : authMode === "up"
-                        ? "Create account"
-                        : "Sign in"}
-                  </Text>
-                </Pressable>
-              </View>
+              <WelcomeScreen
+                mode={authMode}
+                name={authName}
+                email={authEmail}
+                password={authPassword}
+                busy={busy}
+                onMode={setAuthMode}
+                onName={setAuthName}
+                onEmail={setAuthEmail}
+                onPassword={setAuthPassword}
+                onSubmit={() => {
+                  void submitAuth();
+                }}
+              />
             )}
 
             {screen === "about" && (
-              <View>
-                <OnboardingProgress step={1} total={4} />
-                <Text style={styles.label}>Professional context</Text>
-                <TextInput
-                  style={styles.input}
-                  value={occupation}
-                  onChangeText={setOccupation}
-                  placeholder="e.g. Software developer"
-                  placeholderTextColor={colors.ink[500]}
-                />
-                <Text style={styles.label}>Activity level</Text>
-                <View style={styles.chips}>
-                  {ACTIVITY_LEVELS.map((a) => (
-                    <Chip
-                      key={a}
-                      label={a}
-                      selected={activityLevel === a}
-                      onToggle={() => setActivityLevel(a)}
-                    />
-                  ))}
-                </View>
-                <Pressable
-                  style={styles.primary}
-                  onPress={() => setScreen("owned")}
-                >
-                  <Text style={styles.primaryText}>Continue</Text>
-                </Pressable>
-              </View>
+              <AboutScreen
+                occupation={occupation}
+                activityLevel={activityLevel}
+                onOccupation={setOccupation}
+                onActivityLevel={setActivityLevel}
+                onContinue={() => setScreen("owned")}
+              />
             )}
 
             {screen === "owned" && (
-              <View>
-                <OnboardingProgress step={3} total={4} />
-                <Text style={styles.label}>Hardware pairing</Text>
-                <Text style={styles.cardSub}>
-                  Scan your Vyn gear QR to unlock guides &amp; paired protocols
-                  — or pick what you own below.
-                </Text>
-                <Text style={styles.cardSub}>
-                  We will tailor routines to your gear.
-                </Text>
-                <View style={styles.chips}>
-                  {ownedOptions.map((sku) => (
-                    <Chip
-                      key={sku}
-                      label={sku}
-                      selected={productsOwned.includes(sku)}
-                      onToggle={() =>
-                        setProductsOwned(
-                          productsOwned.includes(sku)
-                            ? productsOwned.filter((x) => x !== sku)
-                            : [...productsOwned, sku],
-                        )
-                      }
-                    />
-                  ))}
-                </View>
-                <Pressable
-                  style={styles.primary}
-                  onPress={() => setScreen("profile")}
-                >
-                  <Text style={styles.primaryText}>
-                    Generate recovery profile
-                  </Text>
-                </Pressable>
-              </View>
+              <OwnedScreen
+                options={ownedOptions}
+                owned={productsOwned}
+                onToggle={(sku) =>
+                  setProductsOwned(
+                    productsOwned.includes(sku)
+                      ? productsOwned.filter((x) => x !== sku)
+                      : [...productsOwned, sku],
+                  )
+                }
+                onContinue={() => setScreen("profile")}
+              />
             )}
 
             {screen === "profile" && (
-              <View>
-                <OnboardingProgress step={2} total={4} />
-                <Text style={styles.label}>Symptom mapping</Text>
-                <Text style={styles.cardSub}>
-                  Where do you feel strain? Pick all that apply.
-                </Text>
-                <Text style={styles.label}>Goals</Text>
-                <View style={styles.chips}>
-                  {GOAL_OPTIONS.map((g) => (
-                    <Chip
-                      key={g}
-                      label={g}
-                      selected={goals.includes(g)}
-                      onToggle={() => toggle(goals, g, setGoals)}
-                    />
-                  ))}
-                </View>
-                <Text style={styles.label}>Pain areas</Text>
-                <View style={styles.chips}>
-                  {PAIN_OPTIONS.map((p) => (
-                    <Chip
-                      key={p}
-                      label={p}
-                      selected={painAreas.includes(p)}
-                      onToggle={() => toggle(painAreas, p, setPainAreas)}
-                    />
-                  ))}
-                </View>
-                <NumberRow
-                  label="Minutes per session"
-                  value={minutes}
-                  min={5}
-                  max={120}
-                  onChange={setMinutes}
-                />
-                <NumberRow
-                  label="Days per week"
-                  value={days}
-                  min={1}
-                  max={7}
-                  onChange={setDays}
-                />
-                <Pressable
-                  style={styles.primary}
-                  onPress={saveProfile}
-                  disabled={busy}
-                >
-                  <Text style={styles.primaryText}>
-                    {busy ? "Saving…" : "Continue"}
-                  </Text>
-                </Pressable>
-              </View>
+              <ProfileScreen
+                goals={goals}
+                painAreas={painAreas}
+                minutes={minutes}
+                days={days}
+                busy={busy}
+                onToggleGoal={(g) => toggle(goals, g, setGoals)}
+                onTogglePain={(p) => toggle(painAreas, p, setPainAreas)}
+                onMinutes={setMinutes}
+                onDays={setDays}
+                onContinue={() => {
+                  void saveProfile();
+                }}
+              />
             )}
 
             {screen === "assessment" && (
-              <View>
-                <NumberRow
-                  label="Soreness (1–5)"
-                  value={soreness}
-                  min={1}
-                  max={5}
-                  onChange={setSoreness}
-                />
-                <Text style={styles.label}>Sleep hours</Text>
-                <TextInput
-                  style={styles.input}
-                  value={sleep}
-                  onChangeText={setSleep}
-                  keyboardType="numeric"
-                  placeholder="e.g. 7"
-                  placeholderTextColor={colors.ink[500]}
-                />
-                <NumberRow
-                  label="Stress (1–5)"
-                  value={stress}
-                  min={1}
-                  max={5}
-                  onChange={setStress}
-                />
-                <Pressable
-                  style={styles.primary}
-                  onPress={saveAssessment}
-                  disabled={busy}
-                >
-                  <Text style={styles.primaryText}>
-                    {busy ? "Building plan…" : "Generate my plan"}
-                  </Text>
-                </Pressable>
-              </View>
+              <AssessmentScreen
+                soreness={soreness}
+                sleep={sleep}
+                stress={stress}
+                busy={busy}
+                onSoreness={setSoreness}
+                onSleep={setSleep}
+                onStress={setStress}
+                onSubmit={() => {
+                  void saveAssessment();
+                }}
+              />
             )}
 
             {screen === "plan" && plan && (
-              <View>
-                {plan.items.map((item) => (
-                  <View key={item.day} style={styles.card}>
-                    <Text style={styles.cardDay}>{item.day}</Text>
-                    <Text style={styles.cardTitle}>{item.title}</Text>
-                    <Text style={styles.cardSub}>
-                      {item.durationMin} min · {item.slug}
-                    </Text>
-                  </View>
-                ))}
-                <Text style={styles.rationale}>{plan.rationale}</Text>
-                {explanation ? (
-                  <View style={styles.card}>
-                    <Text style={styles.cardDay}>Why this plan</Text>
-                    <Text style={styles.cardSub}>{explanation.summary}</Text>
-                    {explanation.reasons.map((r) => (
-                      <Text key={r} style={styles.cardSub}>
-                        • {r}
-                      </Text>
-                    ))}
-                    {explanation.sources.map((s) => (
-                      <Text key={s.title} style={styles.cardSub}>
-                        📖 {s.title} ({s.source})
-                      </Text>
-                    ))}
-                    <Text style={styles.cardSub}>{explanation.disclaimer}</Text>
-                  </View>
-                ) : (
-                  <Pressable
-                    style={styles.secondary}
-                    onPress={() => {
-                      void loadExplanation(plan.id);
-                    }}
-                  >
-                    <Text style={styles.secondaryText}>Why this plan?</Text>
-                  </Pressable>
-                )}
-                <Pressable
-                  style={styles.primary}
-                  onPress={openHome}
-                  disabled={busy}
-                >
-                  <Text style={styles.primaryText}>
-                    {busy ? "Loading…" : "Open Home"}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("profile")}
-                >
-                  <Text style={styles.secondaryText}>Start over</Text>
-                </Pressable>
-              </View>
+              <PlanScreen
+                plan={plan}
+                explanation={explanation}
+                busy={busy}
+                onExplain={() => {
+                  void loadExplanation(plan.id);
+                }}
+                onOpenHome={() => {
+                  void openHome();
+                }}
+                onStartOver={() => setScreen("profile")}
+              />
             )}
 
             {screen === "home" && (
-              <View>
-                <AppHeader
-                  title={`Good day${home?.score ? ` · ${home.score.score}` : ""}`}
-                  onMenu={() => setDrawerOpen(true)}
-                  onBell={() => setScreen("notifications")}
-                  unread={(notifyList ?? []).filter((n) => !n.read).length}
-                />
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("coach")}
-                >
-                  <Text style={styles.secondaryText}>🤖 Ask AI Coach</Text>
-                </Pressable>
-                <View style={styles.homeTop}>
-                  <ScoreRing value={home?.score?.score ?? 0} size={120} />
-                  <View style={{ flex: 1, gap: 8 }}>
-                    <StreakPill count={home?.streak.count ?? 0} />
-                    <StreakDots
-                      days={7}
-                      active={Math.min(7, home?.streak.count ?? 0)}
-                    />
-                    <Text style={styles.cardSub}>
-                      {home
-                        ? `${home.weekday} ${home.date}${home.checkIn ? " · checked in" : " · not checked in yet"}`
-                        : "Loading…"}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={styles.label}>Today&apos;s session</Text>
-                {home?.todaySession ? (
-                  <RoutineHeroCard
-                    title={home.todaySession.title}
-                    meta={`${home.todaySession.day} · ${home.todaySession.durationMin} min · ${home.todaySession.slug}`}
-                    cta="Start session"
-                    onCta={() => {
-                      const slug = home.todaySession?.slug;
-                      if (slug) void openProgram(slug);
-                    }}
-                  />
-                ) : (
-                  <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Rest day</Text>
-                    <Text style={styles.cardSub}>
-                      No session planned — light movement only.
-                    </Text>
-                  </View>
-                )}
-
-                <Text style={styles.label}>How does your body feel today?</Text>
-                <View style={styles.moodRow}>
-                  {MOODS.map((m) => (
-                    <Pressable
-                      key={m.value}
-                      style={[
-                        styles.mood,
-                        soreness === m.value && styles.moodSelected,
-                      ]}
-                      onPress={() => setSoreness(m.value)}
-                    >
-                      <Text style={styles.moodEmoji}>{m.emoji}</Text>
-                      <Text style={styles.moodLabel}>{m.label}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <Text style={styles.label}>Sleep hours</Text>
-                <TextInput
-                  style={styles.input}
-                  value={sleep}
-                  onChangeText={setSleep}
-                  keyboardType="numeric"
-                  placeholder="e.g. 7"
-                  placeholderTextColor={colors.ink[500]}
-                />
-                <NumberRow
-                  label="Stress (1–5)"
-                  value={stress}
-                  min={1}
-                  max={5}
-                  onChange={setStress}
-                />
-                <Pressable
-                  style={styles.primary}
-                  onPress={submitCheckIn}
-                  disabled={busy}
-                >
-                  <Text style={styles.primaryText}>
-                    {busy ? "Saving…" : "Submit check-in"}
-                  </Text>
-                </Pressable>
-
-                <Text style={styles.label}>Today&apos;s recovery plan</Text>
-                {(weekPlan ?? []).map((item) => {
-                  const done = history.some(
-                    (h) => h.programId === item.programId,
-                  );
-                  return (
-                    <View key={item.day} style={styles.checklistRow}>
-                      <View style={[styles.checkDot, done && styles.checkDone]}>
-                        {done ? <Text style={styles.checkText}>✓</Text> : null}
-                      </View>
-                      <Text style={styles.checklistText}>
-                        {item.day} · {item.title} ({item.durationMin} min)
-                      </Text>
-                    </View>
-                  );
-                })}
-
-                {home?.todaySession ? (
-                  <Pressable
-                    style={styles.primary}
-                    onPress={() => {
-                      void openProgram(home.todaySession!.slug);
-                    }}
-                  >
-                    <Text style={styles.primaryText}>
-                      Continue · {home.todaySession.title}
-                    </Text>
-                  </Pressable>
-                ) : null}
-
-                {tip ? (
-                  <View style={styles.card}>
-                    <Text style={styles.cardDay}>Daily tip · {tip.source}</Text>
-                    <Text style={styles.cardTitle}>{tip.title}</Text>
-                    <Text style={styles.cardSub}>{tip.body}</Text>
-                  </View>
-                ) : null}
-
-                {homeRecs && homeRecs.length > 0 ? (
-                  <View style={styles.card}>
-                    <Text style={styles.cardDay}>
-                      Today&apos;s routine works even better with
-                    </Text>
-                    <Text style={styles.cardTitle}>{homeRecs[0].title}</Text>
-                    <Pressable
-                      onPress={() => {
-                        void openProduct(homeRecs[0].sku);
-                      }}
-                    >
-                      <Text style={styles.bookmark}>View product →</Text>
-                    </Pressable>
-                  </View>
-                ) : null}
-              </View>
+              <HomeScreen
+                home={home}
+                tip={tip}
+                homeRecs={homeRecs}
+                weekPlan={weekPlan}
+                history={history}
+                unread={(notifyList ?? []).filter((n) => !n.read).length}
+                soreness={soreness}
+                sleep={sleep}
+                stress={stress}
+                busy={busy}
+                onMenu={() => setDrawerOpen(true)}
+                onBell={() => setScreen("notifications")}
+                onCoach={() => setScreen("coach")}
+                onSoreness={setSoreness}
+                onSleep={setSleep}
+                onStress={setStress}
+                onSubmitCheckIn={() => {
+                  void submitCheckIn();
+                }}
+                onStartSession={(slug) => {
+                  void openProgram(slug);
+                }}
+                onOpenProduct={(sku) => {
+                  void openProduct(sku);
+                }}
+              />
             )}
 
             {screen === "recover" && (
-              <View>
-                {pendingCount > 0 ? (
-                  <Text style={styles.pendingBanner}>
-                    {pendingCount} session(s) saved offline — will sync
-                  </Text>
-                ) : null}
-                {busy && programs === null ? (
-                  <Text style={styles.cardSub}>Loading…</Text>
-                ) : null}
-                <Text style={styles.label}>Recovery library</Text>
-                <View style={styles.chips}>
-                  <Chip
-                    label="All"
-                    selected={recoverTag === null}
-                    onToggle={() => setRecoverTag(null)}
-                  />
-                  {[
-                    "neck",
-                    "shoulders",
-                    "back",
-                    "lower-back",
-                    "posture",
-                    "sitting",
-                    "legs",
-                    "sleep",
-                  ].map((t) => (
-                    <Chip
-                      key={t}
-                      label={t}
-                      selected={recoverTag === t}
-                      onToggle={() => setRecoverTag(t)}
-                    />
-                  ))}
-                </View>
-                {(programs ?? [])
-                  .filter(
-                    (p) => !recoverTag || p.problemTags.includes(recoverTag),
-                  )
-                  .map((p) => (
-                    <Pressable
-                      key={p.slug}
-                      style={styles.card}
-                      onPress={() => {
-                        void openProgram(p.slug);
-                      }}
-                    >
-                      <Text style={styles.cardDay}>
-                        {p.level} · {p.duration_min} min
-                      </Text>
-                      <Text style={styles.cardTitle}>{p.title}</Text>
-                      <Text style={styles.cardSub}>{p.description}</Text>
-                    </Pressable>
-                  ))}
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("home")}
-                >
-                  <Text style={styles.secondaryText}>Back to Home</Text>
-                </Pressable>
-              </View>
+              <RecoverScreen
+                programs={programs}
+                activeTag={recoverTag}
+                pendingCount={pendingCount}
+                loading={busy}
+                onSelectTag={setRecoverTag}
+                onOpenProgram={(slug) => {
+                  void openProgram(slug);
+                }}
+                onBack={() => setScreen("home")}
+              />
             )}
 
             {screen === "program" && selectedProgram && (
-              <View>
-                <Text style={styles.label}>{selectedProgram.title}</Text>
-                <Pressable
-                  onPress={() => {
-                    void toggleBookmark("program", selectedProgram.id);
-                  }}
-                >
-                  <Text style={styles.bookmark}>
-                    {isBookmarked("program", selectedProgram.id)
-                      ? "★ Saved"
-                      : "☆ Save program"}
-                  </Text>
-                </Pressable>
-                <Text style={styles.cardSub}>
-                  {selectedProgram.description}
-                </Text>
-                {selectedProgram.steps.map((s, i) => (
-                  <View
-                    key={s.name}
-                    style={[styles.card, i === stepIdx && styles.cardActive]}
-                  >
-                    <Text style={styles.cardDay}>
-                      Step {i + 1} of {selectedProgram.steps.length}
-                    </Text>
-                    <Text style={styles.cardTitle}>{s.name}</Text>
-                    <Text style={styles.cardSub}>
-                      {i === stepIdx ? `${secondsLeft}s left` : `${s.seconds}s`}
-                    </Text>
-                  </View>
-                ))}
-                {doneMsg ? <Text style={styles.doneMsg}>{doneMsg}</Text> : null}
-                <View style={styles.btnRow}>
-                  <Pressable
-                    style={styles.primary}
-                    onPress={() => setTimerOn(!timerOn)}
-                  >
-                    <Text style={styles.primaryText}>
-                      {timerOn ? "Pause" : "Start / Resume"}
-                    </Text>
-                  </Pressable>
-                  <Pressable style={styles.secondary} onPress={skipStep}>
-                    <Text style={styles.secondaryText}>Skip step</Text>
-                  </Pressable>
-                </View>
-                <Text style={styles.cardSub}>
-                  Equipment:{" "}
-                  {selectedProgram.equipment.length > 0
-                    ? selectedProgram.equipment.join(", ")
-                    : "Bodyweight only"}
-                </Text>
-                <Text style={styles.cardSub}>
-                  Safety: move gently, never push into sharp pain. Stop and rest
-                  if you feel dizzy or numb.
-                </Text>
-                <Pressable
-                  style={[styles.primary, !finished && { opacity: 0.45 }]}
-                  disabled={!finished || busy}
-                  onPress={() => setScreen("feedback")}
-                >
-                  <Text style={styles.primaryText}>Finish</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => {
-                    setTimerOn(false);
-                    setScreen("recover");
-                  }}
-                >
-                  <Text style={styles.secondaryText}>All programs</Text>
-                </Pressable>
-              </View>
+              <ProgramScreen
+                program={selectedProgram}
+                stepIdx={stepIdx}
+                secondsLeft={secondsLeft}
+                timerOn={timerOn}
+                finished={finished}
+                busy={busy}
+                doneMsg={doneMsg}
+                saved={isBookmarked("program", selectedProgram.id)}
+                onToggleSave={() => {
+                  void toggleBookmark("program", selectedProgram.id);
+                }}
+                onToggleTimer={() => setTimerOn(!timerOn)}
+                onSkipStep={skipStep}
+                onFinish={() => setScreen("feedback")}
+                onAllPrograms={() => {
+                  setTimerOn(false);
+                  setScreen("recover");
+                }}
+              />
             )}
 
             {screen === "feedback" && (
-              <View>
-                <Text style={styles.label}>How did that feel?</Text>
-                <View style={styles.moodRow}>
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <Pressable
-                      key={s}
-                      style={[styles.mood, rating === s && styles.moodSelected]}
-                      onPress={() => setRating(s)}
-                    >
-                      <Text style={styles.moodEmoji}>{"★".repeat(1)}</Text>
-                      <Text style={styles.moodLabel}>{s}/5</Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <TextInput
-                  style={[styles.input, { minHeight: 80 }]}
-                  value={feedback}
-                  onChangeText={setFeedback}
-                  placeholder="Anything to note? (optional)"
-                  placeholderTextColor={colors.ink[500]}
-                  multiline
-                />
-                <Pressable
-                  style={styles.primary}
-                  onPress={() => {
-                    void completeSession();
-                  }}
-                  disabled={busy}
-                >
-                  <Text style={styles.primaryText}>
-                    {busy ? "Saving…" : "Submit feedback"}
-                  </Text>
-                </Pressable>
-              </View>
+              <FeedbackScreen
+                rating={rating}
+                feedback={feedback}
+                busy={busy}
+                onRating={setRating}
+                onFeedback={setFeedback}
+                onSubmit={() => {
+                  void completeSession();
+                }}
+              />
             )}
 
             {screen === "done" && (
-              <View style={styles.centerWrap}>
-                <Text style={styles.splashLogo}>🎉</Text>
-                <Text style={styles.label}>Great job!</Text>
-                <Text style={styles.cardSub}>
-                  Today&apos;s recovery is complete.
-                </Text>
-                {doneMsg ? <Text style={styles.doneMsg}>{doneMsg}</Text> : null}
-                {lastGain !== null ? (
-                  <Text style={styles.streakFlame}>
-                    Recovery Score {lastGain >= 0 ? `+${lastGain}` : lastGain}
-                  </Text>
-                ) : null}
-                {home ? (
-                  <Text style={styles.cardSub}>
-                    🔥 {home.streak.count}-day streak
-                  </Text>
-                ) : null}
-                <Pressable
-                  style={styles.primary}
-                  onPress={() => setScreen("home")}
-                >
-                  <Text style={styles.primaryText}>Back to Home</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("progress")}
-                >
-                  <Text style={styles.secondaryText}>Track progress</Text>
-                </Pressable>
-              </View>
+              <DoneScreen
+                doneMsg={doneMsg}
+                lastGain={lastGain}
+                home={home}
+                onHome={() => setScreen("home")}
+                onProgress={() => setScreen("progress")}
+              />
             )}
 
             {screen === "learn" && (
-              <View>
-                <Text style={styles.label}>For you</Text>
-                {(related ?? []).slice(0, 3).map((r) => (
-                  <Pressable
-                    key={`${r.kind}-${r.slug}`}
-                    style={styles.card}
-                    onPress={() => {
-                      void openLearnDetail(r.kind, r.slug);
-                    }}
-                  >
-                    <Text style={styles.cardDay}>
-                      {r.kind} · {r.matchedTags.join(", ") || "general"}
-                    </Text>
-                    <Text style={styles.cardTitle}>{r.title}</Text>
-                    <Text style={styles.cardSub}>{r.subtitle}</Text>
-                  </Pressable>
-                ))}
-                <Text style={styles.label}>Library</Text>
-                <View style={styles.chips}>
-                  {LEARN_CATEGORIES.map((c) => (
-                    <Chip
-                      key={c}
-                      label={c}
-                      selected={learnCat === c}
-                      onToggle={() => setLearnCat(c)}
-                    />
-                  ))}
-                </View>
-                <View style={styles.chips}>
-                  <Chip
-                    label="Articles"
-                    selected={learnTab === "articles"}
-                    onToggle={() => {
-                      setLearnItems(null);
-                      void loadLearnScreen("articles");
-                    }}
-                  />
-                  <Chip
-                    label="Videos"
-                    selected={learnTab === "videos"}
-                    onToggle={() => {
-                      setLearnItems(null);
-                      void loadLearnScreen("videos");
-                    }}
-                  />
-                </View>
-                {(learnItems ?? [])
-                  .filter(
-                    (item) =>
-                      learnCat === "All" ||
-                      item.category.toLowerCase() === learnCat.toLowerCase() ||
-                      (learnCat === "Product Guides" && learnTab === "videos"),
-                  )
-                  .map((item) => (
-                    <View key={item.slug} style={styles.card}>
-                      <Pressable
-                        onPress={() => {
-                          void openLearnDetail(
-                            learnTab === "articles" ? "article" : "video",
-                            item.slug,
-                          );
-                        }}
-                      >
-                        <Text style={styles.cardDay}>{item.category}</Text>
-                        <Text style={styles.cardTitle}>{item.title}</Text>
-                        <Text style={styles.cardSub}>{item.sub}</Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => {
-                          void toggleBookmark(
-                            learnTab === "articles" ? "article" : "video",
-                            item.id,
-                          );
-                        }}
-                      >
-                        <Text style={styles.bookmark}>
-                          {isBookmarked(
-                            learnTab === "articles" ? "article" : "video",
-                            item.id,
-                          )
-                            ? "★ Saved"
-                            : "☆ Save"}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  ))}
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("home")}
-                >
-                  <Text style={styles.secondaryText}>Back to Home</Text>
-                </Pressable>
-              </View>
+              <LearnScreen
+                related={related}
+                items={learnItems}
+                category={learnCat}
+                tab={learnTab}
+                isBookmarked={isBookmarked}
+                onOpenDetail={(kind, slug) => {
+                  void openLearnDetail(kind, slug);
+                }}
+                onSelectCategory={setLearnCat}
+                onSelectTab={(t) => {
+                  setLearnItems(null);
+                  void loadLearnScreen(t);
+                }}
+                onToggleBookmark={(kind, id) => {
+                  void toggleBookmark(kind, id);
+                }}
+                onBack={() => setScreen("home")}
+              />
             )}
 
             {screen === "learnDetail" && learnDetail && (
-              <View>
-                <Text style={styles.cardDay}>{learnDetail.category}</Text>
-                <Text style={styles.label}>{learnDetail.title}</Text>
-                {learnDetail.kind === "article" ? (
-                  <Text style={styles.cardSub}>
-                    {learnDetail.body || learnDetail.excerpt}
-                  </Text>
-                ) : (
-                  <Text style={styles.cardSub}>
-                    {learnDetail.playbackUrl ??
-                      "Video coming soon — media library in progress."}
-                  </Text>
-                )}
-                <Pressable
-                  onPress={() => {
-                    void toggleBookmark(learnDetail.kind, learnDetail.id);
-                  }}
-                >
-                  <Text style={styles.bookmark}>
-                    {isBookmarked(learnDetail.kind, learnDetail.id)
-                      ? "★ Saved"
-                      : "☆ Save"}
-                  </Text>
-                </Pressable>
-                {learnRelProgs.length > 0 ? (
-                  <View>
-                    <Text style={styles.label}>Related programs</Text>
-                    {learnRelProgs.map((p) => (
-                      <Pressable
-                        key={p.slug}
-                        style={styles.card}
-                        onPress={() => {
-                          void openProgram(p.slug);
-                        }}
-                      >
-                        <Text style={styles.cardTitle}>{p.title}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                ) : null}
-                {learnRelProds.length > 0 ? (
-                  <View>
-                    <Text style={styles.label}>Related products</Text>
-                    {learnRelProds.map((p) => (
-                      <Pressable
-                        key={p.sku}
-                        style={styles.card}
-                        onPress={() => {
-                          void openProduct(p.sku);
-                        }}
-                      >
-                        <Text style={styles.cardTitle}>{p.title}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                ) : null}
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("learn")}
-                >
-                  <Text style={styles.secondaryText}>Back to Learn</Text>
-                </Pressable>
-              </View>
+              <LearnDetailScreen
+                detail={learnDetail}
+                relProgs={learnRelProgs}
+                relProds={learnRelProds}
+                isBookmarked={isBookmarked}
+                onToggleBookmark={(kind, id) => {
+                  void toggleBookmark(kind, id);
+                }}
+                onOpenProgram={(slug) => {
+                  void openProgram(slug);
+                }}
+                onOpenProduct={(sku) => {
+                  void openProduct(sku);
+                }}
+                onBack={() => setScreen("learn")}
+              />
             )}
 
             {screen === "shop" && (
-              <View>
-                <Text style={styles.label}>I&apos;m having…</Text>
-                <View style={styles.chips}>
-                  <Chip
-                    label="For me"
-                    selected={shopProblem === null}
-                    onToggle={() => {
-                      void loadShopScreen();
-                      setShopProblem(null);
-                    }}
-                  />
-                  {PROBLEM_CHIPS.map((p) => (
-                    <Chip
-                      key={p.tag}
-                      label={p.label}
-                      selected={shopProblem === p.tag}
-                      onToggle={() => {
-                        void loadShopProblem(p.tag);
-                      }}
-                    />
-                  ))}
-                </View>
-                <Text style={styles.label}>Collections</Text>
-                <View style={styles.chips}>
-                  {COLLECTIONS.map((c) => (
-                    <Chip
-                      key={c.label}
-                      label={c.label}
-                      selected={false}
-                      onToggle={() => {
-                        void loadShopProblem(c.tag);
-                      }}
-                    />
-                  ))}
-                </View>
-                <Text style={styles.label}>Recommended for you</Text>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => {
-                    void loadCart();
-                    setScreen("cart");
-                  }}
-                >
-                  <Text style={styles.secondaryText}>
-                    🛒 Cart ({cart.reduce((n, c) => n + c.qty, 0)})
-                  </Text>
-                </Pressable>
-                {(shopRecs ?? []).map((r) => (
-                  <View key={r.sku} style={styles.card}>
-                    <Pressable
-                      onPress={() => {
-                        void openProduct(r.sku);
-                      }}
-                    >
-                      <Text style={styles.cardDay}>
-                        {r.isBundle ? "Bundle" : "Product"}
-                        {r.matchedTags.length > 0
-                          ? ` · for ${r.matchedTags.join(", ")}`
-                          : ""}
-                      </Text>
-                      <Text style={styles.cardTitle}>{r.title}</Text>
-                      <Text style={styles.cardSub}>
-                        {r.currency === "NGN" ? "₦" : `${r.currency} `}
-                        {(r.amountMinor / 100).toLocaleString()}
-                        {r.isBundle && r.members.length > 0
-                          ? ` · ${r.members.length} items`
-                          : ""}
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.secondary}
-                      onPress={() => {
-                        addToCart({
-                          sku: r.sku,
-                          title: r.title,
-                          amountMinor: r.amountMinor,
-                          currency: r.currency,
-                        });
-                      }}
-                    >
-                      <Text style={styles.secondaryText}>Add to cart</Text>
-                    </Pressable>
-                  </View>
-                ))}
-                {buyMsg ? <Text style={styles.doneMsg}>{buyMsg}</Text> : null}
-                {pendingTx ? (
-                  <Pressable
-                    style={styles.primary}
-                    onPress={() => {
-                      void checkPayment(pendingTx);
-                    }}
-                  >
-                    <Text style={styles.primaryText}>
-                      I&apos;ve paid — check status
-                    </Text>
-                  </Pressable>
-                ) : null}
-
-                <Text style={styles.label}>My orders</Text>
-                {(shopOrders ?? []).map((o) => (
-                  <View key={o.id} style={styles.card}>
-                    <Text style={styles.cardDay}>
-                      #{o.id} · {o.status} · pay {o.paymentStatus ?? "?"} · ship{" "}
-                      {o.fulfillmentStatus ?? "—"}
-                    </Text>
-                    <Text style={styles.cardTitle}>
-                      {o.currency === "NGN" ? "₦" : `${o.currency} `}
-                      {(o.amountMinor / 100).toLocaleString()}
-                    </Text>
-                    <Text style={styles.cardSub}>
-                      {o.items.map((i) => `${i.title} ×${i.qty}`).join(" · ")}
-                    </Text>
-                    {o.txRef ? (
-                      <Text style={styles.cardSub}>{o.txRef}</Text>
-                    ) : null}
-                  </View>
-                ))}
-
-                <Text style={styles.label}>QR code</Text>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setQrOpen(true)}
-                >
-                  <Text style={styles.secondaryText}>▣ Scan hardware QR</Text>
-                </Pressable>
-                <TextInput
-                  style={styles.input}
-                  value={qrInput}
-                  onChangeText={setQrInput}
-                  placeholder="Or enter manually: VYN1-XXXXXXXXXXXX"
-                  placeholderTextColor={colors.ink[500]}
-                />
-                <Pressable
-                  style={styles.primary}
-                  onPress={() => {
-                    void submitQr();
-                  }}
-                >
-                  <Text style={styles.primaryText}>Resolve</Text>
-                </Pressable>
-                {qrResult ? (
-                  <Text style={styles.doneMsg}>{qrResult}</Text>
-                ) : null}
-
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("home")}
-                >
-                  <Text style={styles.secondaryText}>Back to Home</Text>
-                </Pressable>
-              </View>
+              <ShopScreen
+                recs={shopRecs}
+                orders={shopOrders}
+                activeProblem={shopProblem}
+                cartCount={cart.reduce((n, c) => n + c.qty, 0)}
+                buyMsg={buyMsg}
+                pendingTx={pendingTx}
+                qrInput={qrInput}
+                qrResult={qrResult}
+                onForMe={() => {
+                  void loadShopScreen();
+                  setShopProblem(null);
+                }}
+                onProblemTag={(tag) => {
+                  void loadShopProblem(tag);
+                }}
+                onCollectionTag={(tag) => {
+                  void loadShopProblem(tag);
+                }}
+                onOpenCart={() => {
+                  void loadCart();
+                  setScreen("cart");
+                }}
+                onOpenProduct={(sku) => {
+                  void openProduct(sku);
+                }}
+                onAddToCart={(item) => addToCart(item)}
+                onCheckPayment={() => {
+                  if (pendingTx) void checkPayment(pendingTx);
+                }}
+                onScanQr={() => setQrOpen(true)}
+                onQrInput={setQrInput}
+                onResolveQr={() => {
+                  void submitQr();
+                }}
+                onBack={() => setScreen("home")}
+              />
             )}
 
             {screen === "product" && product && (
-              <View>
-                <Text style={styles.cardDay}>
-                  {product.isBundle ? "Bundle" : "Product"} ·{" "}
-                  {product.problemTags.join(", ")}
-                </Text>
-                <Text style={styles.label}>{product.title}</Text>
-                <Text style={styles.cardTitle}>
-                  {product.currency === "NGN" ? "₦" : `${product.currency} `}
-                  {(product.amountMinor / 100).toLocaleString()}
-                </Text>
-                {product.isBundle && product.members.length > 0 ? (
-                  <View>
-                    <Text style={styles.label}>In this bundle</Text>
-                    {product.members.map((m) => (
-                      <Text key={m.sku} style={styles.cardSub}>
-                        • {m.title ?? m.sku} ×{m.qty}
-                      </Text>
-                    ))}
-                  </View>
-                ) : null}
-                {product.guides.length > 0 ? (
-                  <View>
-                    <Text style={styles.label}>Guides & how to use</Text>
-                    {product.guides.map((g) => (
-                      <Pressable
-                        key={`${g.kind}-${g.slug}`}
-                        style={styles.card}
-                        onPress={() => {
-                          void openLearnDetail(
-                            g.kind as "article" | "video",
-                            g.slug,
-                          );
-                        }}
-                      >
-                        <Text style={styles.cardDay}>
-                          {g.kind} guide — from your product QR
-                        </Text>
-                        <Text style={styles.cardTitle}>{g.title}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                ) : null}
-                {product.routines.length > 0 ? (
-                  <View>
-                    <Text style={styles.label}>Recovery routines</Text>
-                    {product.routines.map((r) => (
-                      <Pressable
-                        key={r.slug}
-                        style={styles.card}
-                        onPress={() => {
-                          void openProgram(r.slug);
-                        }}
-                      >
-                        <Text style={styles.cardTitle}>{r.title}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                ) : null}
-                {product.related.length > 0 ? (
-                  <View>
-                    <Text style={styles.label}>Related products</Text>
-                    {product.related.map((r) => (
-                      <Pressable
-                        key={r.sku}
-                        style={styles.card}
-                        onPress={() => {
-                          void openProduct(r.sku);
-                        }}
-                      >
-                        <Text style={styles.cardTitle}>{r.title}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                ) : null}
-                <Text style={styles.cardSub}>
-                  Reviews and FAQs appear once owners start rating.
-                </Text>
-                <Pressable
-                  style={styles.primary}
-                  onPress={() => {
-                    addToCart({
-                      sku: product.sku,
-                      title: product.title,
-                      amountMinor: product.amountMinor,
-                      currency: product.currency,
-                    });
-                    setScreen("cart");
-                  }}
-                >
-                  <Text style={styles.primaryText}>Add to cart</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("shop")}
-                >
-                  <Text style={styles.secondaryText}>Back to Shop</Text>
-                </Pressable>
-              </View>
+              <ProductScreen
+                product={product}
+                onOpenGuide={(kind, slug) => {
+                  void openLearnDetail(kind, slug);
+                }}
+                onOpenProgram={(slug) => {
+                  void openProgram(slug);
+                }}
+                onOpenProduct={(sku) => {
+                  void openProduct(sku);
+                }}
+                onAddToCart={() => {
+                  addToCart({
+                    sku: product.sku,
+                    title: product.title,
+                    amountMinor: product.amountMinor,
+                    currency: product.currency,
+                  });
+                  setScreen("cart");
+                }}
+                onBack={() => setScreen("shop")}
+              />
             )}
 
             {screen === "wishlist" && (
-              <View>
-                <Text style={styles.label}>Saved products</Text>
-                {wishlist.filter((w) => w.kind === "product").length === 0 ? (
-                  <Text style={styles.cardSub}>
-                    Nothing saved yet — tap ☆ on any product.
-                  </Text>
-                ) : null}
-                {wishlist
-                  .filter((w) => w.kind === "product")
-                  .map((w) => (
-                    <Pressable
-                      key={w.id}
-                      style={styles.card}
-                      onPress={() => {
-                        void openProduct(w.slug ?? "");
-                      }}
-                    >
-                      <Text style={styles.cardTitle}>{w.title ?? w.slug}</Text>
-                    </Pressable>
-                  ))}
-                <Text style={styles.label}>Saved programs</Text>
-                {wishlist.filter((w) => w.kind === "program").length === 0 ? (
-                  <Text style={styles.cardSub}>
-                    Nothing saved yet — tap ☆ on any program.
-                  </Text>
-                ) : null}
-                {wishlist
-                  .filter((w) => w.kind === "program")
-                  .map((w) => (
-                    <Pressable
-                      key={w.id}
-                      style={styles.card}
-                      onPress={() => {
-                        void openProgram(w.slug ?? "");
-                      }}
-                    >
-                      <Text style={styles.cardTitle}>{w.title ?? w.slug}</Text>
-                    </Pressable>
-                  ))}
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("shop")}
-                >
-                  <Text style={styles.secondaryText}>Back to Shop</Text>
-                </Pressable>
-              </View>
+              <WishlistScreen
+                items={wishlist}
+                onOpenProduct={(slug) => {
+                  void openProduct(slug);
+                }}
+                onOpenProgram={(slug) => {
+                  void openProgram(slug);
+                }}
+                onBack={() => setScreen("shop")}
+              />
             )}
 
             {screen === "support" && (
-              <View>
-                <Text style={styles.label}>Contact support</Text>
-                <TextInput
-                  style={styles.input}
-                  value={ticketSubject}
-                  onChangeText={setTicketSubject}
-                  placeholder="Subject"
-                  placeholderTextColor={colors.ink[500]}
-                />
-                <TextInput
-                  style={[styles.input, { minHeight: 80 }]}
-                  value={ticketMessage}
-                  onChangeText={setTicketMessage}
-                  placeholder="How can we help?"
-                  placeholderTextColor={colors.ink[500]}
-                  multiline
-                />
-                <Pressable
-                  style={styles.primary}
-                  onPress={() => {
-                    void submitTicket();
-                  }}
-                >
-                  <Text style={styles.primaryText}>Send ticket</Text>
-                </Pressable>
-                <Text style={styles.label}>My tickets</Text>
-                {tickets.map((t) => (
-                  <View key={t.id} style={styles.card}>
-                    <Text style={styles.cardDay}>{t.status}</Text>
-                    <Text style={styles.cardTitle}>{t.subject}</Text>
-                    {t.message ? (
-                      <Text style={styles.cardSub}>{t.message}</Text>
-                    ) : null}
-                  </View>
-                ))}
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("account")}
-                >
-                  <Text style={styles.secondaryText}>Back to Profile</Text>
-                </Pressable>
-              </View>
+              <SupportScreen
+                subject={ticketSubject}
+                message={ticketMessage}
+                tickets={tickets}
+                onSubject={setTicketSubject}
+                onMessage={setTicketMessage}
+                onSubmit={() => {
+                  void submitTicket();
+                }}
+                onBack={() => setScreen("account")}
+              />
             )}
 
             {screen === "notifications" && (
-              <View>
-                <Text style={styles.label}>Notifications</Text>
-                {(notifyList ?? []).length === 0 ? (
-                  <Text style={styles.cardSub}>All caught up.</Text>
-                ) : null}
-                {(notifyList ?? []).map((n) => (
-                  <View key={n.id} style={styles.card}>
-                    <Text style={styles.cardDay}>
-                      {n.kind}
-                      {n.read ? "" : " · new"}
-                    </Text>
-                    <Text style={styles.cardTitle}>{n.title}</Text>
-                    {n.body ? (
-                      <Text style={styles.cardSub}>{n.body}</Text>
-                    ) : null}
-                  </View>
-                ))}
-                {(notifyList ?? []).some((n) => !n.read) ? (
-                  <Pressable
-                    style={styles.secondary}
-                    onPress={() => {
-                      void markAllRead();
-                    }}
-                  >
-                    <Text style={styles.secondaryText}>Mark all read</Text>
-                  </Pressable>
-                ) : null}
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("home")}
-                >
-                  <Text style={styles.secondaryText}>Back to Home</Text>
-                </Pressable>
-              </View>
+              <NotificationsScreen
+                items={notifyList ?? []}
+                onMarkAllRead={() => {
+                  void markAllRead();
+                }}
+                onBack={() => setScreen("home")}
+              />
             )}
 
             {screen === "coach" && (
-              <View>
-                <Text style={styles.cardSub}>
-                  Grounded in your plan, scores and the Vyn knowledge base.
-                </Text>
-                {chat.length === 0 ? (
-                  <Text style={styles.cardSub}>
-                    Try: “What should I focus on today?”
-                  </Text>
-                ) : null}
-                {chat.map((m, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.card,
-                      m.role === "user" && { backgroundColor: "#eef4ff" },
-                    ]}
-                  >
-                    <Text style={styles.cardDay}>
-                      {m.role === "user" ? "You" : "Vyn Coach"}
-                    </Text>
-                    <Text style={styles.cardSub}>{m.content}</Text>
-                    {(m.sources ?? []).map((s) => (
-                      <Text key={s.title} style={styles.cardSub}>
-                        📖 {s.title} ({s.source})
-                      </Text>
-                    ))}
-                  </View>
-                ))}
-                <TextInput
-                  style={[styles.input, { minHeight: 48 }]}
-                  value={chatInput}
-                  onChangeText={setChatInput}
-                  placeholder="Ask about recovery…"
-                  placeholderTextColor={colors.ink[500]}
-                  multiline
-                />
-                <Pressable
-                  style={styles.primary}
-                  onPress={() => {
-                    void sendChat();
-                  }}
-                  disabled={chatBusy}
-                >
-                  <Text style={styles.primaryText}>
-                    {chatBusy ? "Thinking…" : "Send"}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("home")}
-                >
-                  <Text style={styles.secondaryText}>Back to Home</Text>
-                </Pressable>
-              </View>
+              <CoachScreen
+                chat={chat}
+                input={chatInput}
+                busy={chatBusy}
+                onInput={setChatInput}
+                onSend={() => {
+                  void sendChat();
+                }}
+                onBack={() => setScreen("home")}
+              />
             )}
 
             {screen === "cart" && (
-              <View>
-                <Text style={styles.label}>Your cart</Text>
-                {cart.length === 0 ? (
-                  <Text style={styles.cardSub}>
-                    Empty — add recovery gear from Shop.
-                  </Text>
-                ) : null}
-                {cart.map((c) => (
-                  <View key={c.sku} style={styles.card}>
-                    <Text style={styles.cardTitle}>{c.title}</Text>
-                    <Text style={styles.cardSub}>
-                      {c.currency === "NGN" ? "₦" : `${c.currency} `}
-                      {(c.amountMinor / 100).toLocaleString()} each
-                    </Text>
-                    <View style={styles.row}>
-                      <View style={styles.stepper}>
-                        <Pressable
-                          style={styles.stepBtn}
-                          onPress={() => changeQty(c.sku, -1)}
-                        >
-                          <Text style={styles.stepText}>−</Text>
-                        </Pressable>
-                        <Text style={styles.stepValue}>{c.qty}</Text>
-                        <Pressable
-                          style={styles.stepBtn}
-                          onPress={() => changeQty(c.sku, 1)}
-                        >
-                          <Text style={styles.stepText}>+</Text>
-                        </Pressable>
-                      </View>
-                      <Pressable onPress={() => changeQty(c.sku, -c.qty)}>
-                        <Text style={styles.goalDelete}>Remove</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                ))}
-                {cart.length > 0 ? (
-                  <View>
-                    <Text style={styles.cardTitle}>
-                      Total: ₦{cartTotal().toLocaleString()}
-                    </Text>
-                    <Pressable
-                      style={styles.primary}
-                      onPress={() => setScreen("checkout")}
-                    >
-                      <Text style={styles.primaryText}>Checkout</Text>
-                    </Pressable>
-                  </View>
-                ) : null}
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("shop")}
-                >
-                  <Text style={styles.secondaryText}>Back to Shop</Text>
-                </Pressable>
-              </View>
+              <CartScreen
+                cart={cart}
+                totalMinor={cartTotal()}
+                onChangeQty={(sku, delta) => changeQty(sku, delta)}
+                onRemove={(sku) => changeQty(sku, -9999)}
+                onCheckout={() => setScreen("checkout")}
+                onBack={() => setScreen("shop")}
+              />
             )}
 
             {screen === "checkout" && (
-              <View>
-                <Text style={styles.label}>Delivery details</Text>
-                <TextInput
-                  style={styles.input}
-                  value={shipName}
-                  onChangeText={setShipName}
-                  placeholder="Full name"
-                  placeholderTextColor={colors.ink[500]}
-                />
-                <TextInput
-                  style={styles.input}
-                  value={shipPhone}
-                  onChangeText={setShipPhone}
-                  placeholder="Phone"
-                  placeholderTextColor={colors.ink[500]}
-                  keyboardType="phone-pad"
-                />
-                <TextInput
-                  style={styles.input}
-                  value={shipAddress}
-                  onChangeText={setShipAddress}
-                  placeholder="Street address"
-                  placeholderTextColor={colors.ink[500]}
-                />
-                <TextInput
-                  style={styles.input}
-                  value={shipCity}
-                  onChangeText={setShipCity}
-                  placeholder="City"
-                  placeholderTextColor={colors.ink[500]}
-                />
-                <Text style={styles.label}>Order review</Text>
-                {cart.map((c) => (
-                  <Text key={c.sku} style={styles.cardSub}>
-                    {c.title} ×{c.qty} — ₦
-                    {((c.amountMinor * c.qty) / 100).toLocaleString()}
-                  </Text>
-                ))}
-                <Text style={styles.cardTitle}>
-                  Total: ₦{cartTotal().toLocaleString()}
-                </Text>
-                {buyMsg ? <Text style={styles.doneMsg}>{buyMsg}</Text> : null}
-                {pendingTx ? (
-                  <Pressable
-                    style={styles.primary}
-                    onPress={() => {
-                      void checkPayment(pendingTx);
-                    }}
-                  >
-                    <Text style={styles.primaryText}>
-                      I&apos;ve paid — check status
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    style={styles.primary}
-                    onPress={() => {
-                      void checkout();
-                    }}
-                    disabled={busy || cart.length === 0}
-                  >
-                    <Text style={styles.primaryText}>
-                      {busy ? "Creating order…" : "Pay with Flutterwave"}
-                    </Text>
-                  </Pressable>
-                )}
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("cart")}
-                >
-                  <Text style={styles.secondaryText}>Back to Cart</Text>
-                </Pressable>
-              </View>
+              <CheckoutScreen
+                cart={cart}
+                totalMinor={cartTotal()}
+                shipping={{
+                  name: shipName,
+                  phone: shipPhone,
+                  address: shipAddress,
+                  city: shipCity,
+                }}
+                busy={busy}
+                buyMsg={buyMsg}
+                pendingTx={pendingTx}
+                onShipping={(patch) => {
+                  if (patch.name !== undefined) setShipName(patch.name);
+                  if (patch.phone !== undefined) setShipPhone(patch.phone);
+                  if (patch.address !== undefined)
+                    setShipAddress(patch.address);
+                  if (patch.city !== undefined) setShipCity(patch.city);
+                }}
+                onPay={() => {
+                  void checkout();
+                }}
+                onCheckPayment={() => {
+                  if (pendingTx) void checkPayment(pendingTx);
+                }}
+                onBack={() => setScreen("cart")}
+              />
             )}
 
             {screen === "progress" && (
-              <View>
-                <Text style={styles.label}>Score history</Text>
-                {(progress?.scores ?? []).slice(-14).map((s) => (
-                  <View key={s.date} style={styles.barRow}>
-                    <Text style={styles.barLabel}>{s.date.slice(5)}</Text>
-                    <View style={styles.barTrack}>
-                      <View
-                        style={[
-                          styles.barFill,
-                          {
-                            width: `${s.score}%`,
-                            backgroundColor: bandColor(scoreBandFor(s.score)),
-                          },
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.barValue}>{s.score}</Text>
-                  </View>
-                ))}
-                {progress && progress.scores.length === 0 ? (
-                  <Text style={styles.cardSub}>
-                    No scores yet — submit a check-in.
-                  </Text>
-                ) : null}
-
-                <Text style={styles.label}>Milestones</Text>
-                {(progress?.milestones ?? []).map((m) => (
-                  <View key={m.kind} style={styles.card}>
-                    <Text style={styles.cardTitle}>🏆 {m.label}</Text>
-                    <Text style={styles.cardSub}>
-                      {new Date(m.achievedAt).toLocaleDateString()}
-                    </Text>
-                  </View>
-                ))}
-                {progress && progress.milestones.length === 0 ? (
-                  <Text style={styles.cardSub}>
-                    No milestones yet — keep going.
-                  </Text>
-                ) : null}
-
-                <Text style={styles.label}>Level & XP</Text>
-                {game ? (
-                  <View style={styles.card}>
-                    <Text style={styles.cardTitle}>
-                      Level {game.level} · {game.xp} XP ({game.xpToNext} to
-                      next)
-                    </Text>
-                    <Text style={styles.cardSub}>
-                      {game.badges
-                        .filter((b) => b.earned)
-                        .map((b) => `🏅 ${b.title}`)
-                        .join(" · ") || "No badges yet"}
-                    </Text>
-                  </View>
-                ) : (
-                  <Pressable
-                    style={styles.secondary}
-                    onPress={() => {
-                      void loadGame();
-                    }}
-                  >
-                    <Text style={styles.secondaryText}>Load gamification</Text>
-                  </Pressable>
-                )}
-                <Text style={styles.label}>Challenges</Text>
-                {(game?.challenges ?? []).map((c) => (
-                  <View key={c.id} style={styles.card}>
-                    <Text style={styles.cardTitle}>
-                      {c.done ? "✓ " : ""}
-                      {c.title}
-                    </Text>
-                    <View style={styles.barTrack}>
-                      <View
-                        style={[
-                          styles.barFill,
-                          {
-                            width: `${Math.round((c.progress / c.target) * 100)}%`,
-                          },
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.cardSub}>
-                      {c.progress}/{c.target}
-                    </Text>
-                  </View>
-                ))}
-
-                <Text style={styles.label}>Recommended for you</Text>
-                {(recs ?? []).map((r) => (
-                  <Pressable
-                    key={`${r.kind}-${r.title}`}
-                    style={styles.card}
-                    onPress={() => openRec(r)}
-                  >
-                    <Text style={styles.cardDay}>{r.kind}</Text>
-                    <Text style={styles.cardTitle}>{r.title}</Text>
-                    <Text style={styles.cardSub}>{r.reason}</Text>
-                  </Pressable>
-                ))}
-
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("home")}
-                >
-                  <Text style={styles.secondaryText}>Back to Home</Text>
-                </Pressable>
-              </View>
+              <ProgressScreen
+                progress={progress}
+                game={game}
+                recs={recs}
+                onLoadGame={() => {
+                  void loadGame();
+                }}
+                onOpenRec={openRec}
+                onBack={() => setScreen("home")}
+              />
             )}
 
             {screen === "account" && (
-              <View>
-                <Text style={styles.label}>About you</Text>
-                <View style={styles.card}>
-                  <Text style={styles.cardSub}>
-                    {occupation || "Occupation not set"} · Gear:{" "}
-                    {productsOwned.length > 0
-                      ? productsOwned.join(", ")
-                      : "none listed"}
-                  </Text>
-                </View>
-                <Text style={styles.label}>Notifications</Text>
-                {(notifications ?? []).slice(0, 5).map((n) => (
-                  <View key={n.id} style={styles.card}>
-                    <Text style={styles.cardTitle}>{n.title}</Text>
-                    <Text style={styles.cardSub}>{n.body}</Text>
-                  </View>
-                ))}
-                {(notifications ?? []).some((n) => !n.read) ? (
-                  <Pressable
-                    style={styles.secondary}
-                    onPress={() => {
-                      void markAllRead();
-                    }}
-                  >
-                    <Text style={styles.secondaryText}>Mark all read</Text>
-                  </Pressable>
-                ) : null}
-
-                <Text style={styles.label}>Goals</Text>
-                {(goalList ?? []).map((g) => (
-                  <View key={g.id} style={styles.goalRow}>
-                    <Pressable
-                      style={[styles.checkbox, g.done && styles.checkboxDone]}
-                      onPress={() => {
-                        void toggleGoal(g);
-                      }}
-                    >
-                      <Text style={styles.checkboxText}>
-                        {g.done ? "✓" : ""}
-                      </Text>
-                    </Pressable>
-                    <Text style={[styles.goalTitle, g.done && styles.goalDone]}>
-                      {g.title}
-                    </Text>
-                    <Pressable
-                      onPress={() => {
-                        void removeGoal(g.id);
-                      }}
-                    >
-                      <Text style={styles.goalDelete}>✕</Text>
-                    </Pressable>
-                  </View>
-                ))}
-                <TextInput
-                  style={styles.input}
-                  value={newGoal}
-                  onChangeText={setNewGoal}
-                  placeholder="New goal, e.g. Stretch twice a week"
-                  placeholderTextColor={colors.ink[500]}
-                />
-                <Pressable
-                  style={styles.primary}
-                  onPress={() => {
-                    void addGoal();
-                  }}
-                >
-                  <Text style={styles.primaryText}>Add goal</Text>
-                </Pressable>
-
-                <Text style={styles.label}>My orders</Text>
-                {(shopOrders ?? []).map((o) => (
-                  <View key={o.id} style={styles.card}>
-                    <Text style={styles.cardDay}>
-                      #{o.id} · {o.status}
-                    </Text>
-                    <Text style={styles.cardSub}>
-                      {o.items.map((i) => `${i.title} ×${i.qty}`).join(" · ")}
-                    </Text>
-                  </View>
-                ))}
-
-                <Text style={styles.label}>Premium</Text>
-                {entitlement?.premium ? (
-                  <View style={styles.card}>
-                    <Text style={styles.cardTitle}>
-                      ★ Premium · {entitlement.subscription?.planName}
-                    </Text>
-                  </View>
-                ) : (
-                  <View>
-                    {(subPlans ?? []).map((p) => (
-                      <View key={p.id} style={styles.card}>
-                        <Text style={styles.cardTitle}>{p.name}</Text>
-                        <Text style={styles.cardSub}>
-                          {p.currency === "NGN" ? "₦" : `${p.currency} `}
-                          {(p.amountMinor / 100).toLocaleString()}/{p.interval}
-                        </Text>
-                        <Pressable
-                          style={styles.primary}
-                          onPress={() => {
-                            void subscribe(p.id);
-                          }}
-                        >
-                          <Text style={styles.primaryText}>Subscribe</Text>
-                        </Pressable>
-                      </View>
-                    ))}
-                    {subPlans === null ? (
-                      <Pressable
-                        style={styles.secondary}
-                        onPress={() => {
-                          void loadAccountExtras();
-                        }}
-                      >
-                        <Text style={styles.secondaryText}>Load plans</Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                )}
-
-                <Text style={styles.label}>Referrals</Text>
-                {referral && referral.mine.length > 0 ? (
-                  <View style={styles.card}>
-                    <Text style={styles.cardTitle}>
-                      Your code: {referral.mine[0].code}
-                    </Text>
-                    <Text style={styles.cardSub}>
-                      Status: {referral.mine[0].status}
-                    </Text>
-                  </View>
-                ) : (
-                  <Pressable
-                    style={styles.secondary}
-                    onPress={() => {
-                      void ensureReferralCode();
-                    }}
-                  >
-                    <Text style={styles.secondaryText}>
-                      Get my referral code
-                    </Text>
-                  </Pressable>
-                )}
-                <TextInput
-                  style={styles.input}
-                  value={redeemInput}
-                  onChangeText={setRedeemInput}
-                  placeholder="Redeem a friend's code"
-                  placeholderTextColor={colors.ink[500]}
-                />
-                <Pressable
-                  style={styles.primary}
-                  onPress={() => {
-                    void redeemReferral();
-                  }}
-                >
-                  <Text style={styles.primaryText}>Redeem</Text>
-                </Pressable>
-                {redeemMsg ? (
-                  <Text style={styles.doneMsg}>{redeemMsg}</Text>
-                ) : null}
-
-                <Text style={styles.label}>Settings</Text>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => {
-                    void togglePromos();
-                  }}
-                >
-                  <Text style={styles.secondaryText}>
-                    Promos:{" "}
-                    {promos ? "ON (tap to mute)" : "OFF (tap to unmute)"}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => {
-                    void toggleReminders();
-                  }}
-                >
-                  <Text style={styles.secondaryText}>
-                    Reminders:{" "}
-                    {reminders ? "ON (tap to mute)" : "OFF (tap to unmute)"}
-                  </Text>
-                </Pressable>
-                <TextInput
-                  style={styles.input}
-                  value={reminderTime}
-                  onChangeText={setReminderTime}
-                  placeholder="Reminder time HH:MM"
-                  placeholderTextColor={colors.ink[500]}
-                />
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => {
-                    void saveReminderTime();
-                  }}
-                >
-                  <Text style={styles.secondaryText}>Save reminder time</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => {
-                    if (confirmDelete) {
-                      void deleteMyData();
-                    } else {
-                      setConfirmDelete(true);
-                    }
-                  }}
-                >
-                  <Text style={styles.secondaryText}>
-                    {confirmDelete
-                      ? "Tap again to erase my data"
-                      : "Delete my data"}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => setScreen("home")}
-                >
-                  <Text style={styles.secondaryText}>Back to Home</Text>
-                </Pressable>
-              </View>
+              <AccountScreen
+                occupation={occupation}
+                productsOwned={productsOwned}
+                notifications={notifications}
+                goalList={goalList}
+                newGoal={newGoal}
+                shopOrders={shopOrders}
+                entitlement={entitlement}
+                subPlans={subPlans}
+                referral={referral}
+                redeemInput={redeemInput}
+                redeemMsg={redeemMsg}
+                promos={promos}
+                reminders={reminders}
+                reminderTime={reminderTime}
+                confirmDelete={confirmDelete}
+                onMarkAllRead={() => {
+                  void markAllRead();
+                }}
+                onToggleGoal={(g) => {
+                  void toggleGoal(g);
+                }}
+                onRemoveGoal={(id) => {
+                  void removeGoal(id);
+                }}
+                onNewGoal={setNewGoal}
+                onAddGoal={() => {
+                  void addGoal();
+                }}
+                onLoadPlans={() => {
+                  void loadAccountExtras();
+                }}
+                onSubscribe={(id) => {
+                  void subscribe(id);
+                }}
+                onEnsureReferral={() => {
+                  void ensureReferralCode();
+                }}
+                onRedeemInput={setRedeemInput}
+                onRedeem={() => {
+                  void redeemReferral();
+                }}
+                onTogglePromos={() => {
+                  void togglePromos();
+                }}
+                onToggleReminders={() => {
+                  void toggleReminders();
+                }}
+                onReminderTime={setReminderTime}
+                onSaveReminderTime={() => {
+                  void saveReminderTime();
+                }}
+                onDeleteData={() => {
+                  if (confirmDelete) {
+                    void deleteMyData();
+                  } else {
+                    setConfirmDelete(true);
+                  }
+                }}
+                onBack={() => setScreen("home")}
+              />
             )}
           </ScrollView>
           <TabBar screen={screen} onGo={tabGo} />
@@ -3645,345 +1924,6 @@ export default function App() {
             onSignOut={signOut}
           />
         </View>
-      ) : null}
     </AppErrorBoundary>
   );
 }
-
-const styles = StyleSheet.create({
-  page: {
-    padding: 16,
-    backgroundColor: colors.surface.base,
-    flexGrow: 1,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: colors.brand[900],
-    fontFamily,
-  },
-  step: {
-    fontSize: 14,
-    color: colors.ink[500],
-    marginBottom: 16,
-    fontFamily,
-  },
-  error: { color: colors.danger, marginBottom: 12, fontFamily },
-  label: {
-    fontSize: 15,
-    fontWeight: "600",
-    marginTop: 14,
-    marginBottom: 6,
-    color: colors.ink[900],
-    fontFamily,
-  },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
-    borderWidth: 1.5,
-    borderColor: colors.ink[300],
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  chipSelected: {
-    backgroundColor: colors.brand[500],
-    borderColor: colors.brand[500],
-  },
-  chipText: { color: colors.ink[700], fontWeight: "600", fontFamily },
-  chipTextSelected: { color: "#fff" },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 14,
-  },
-  stepper: { flexDirection: "row", alignItems: "center", gap: 12 },
-  stepBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.brand[100],
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  stepText: {
-    fontSize: 20,
-    color: colors.brand[900],
-    fontWeight: "700",
-    fontFamily,
-  },
-  stepValue: {
-    fontSize: 18,
-    fontWeight: "700",
-    minWidth: 32,
-    textAlign: "center",
-    fontFamily,
-  },
-  input: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: colors.ink[100],
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    fontFamily,
-    minHeight: 44,
-  },
-  primary: {
-    backgroundColor: colors.brand[500],
-    borderRadius: 8,
-    padding: 14,
-    alignItems: "center",
-    marginTop: 24,
-    minHeight: 44,
-  },
-  primaryText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
-    fontFamily,
-  },
-  secondary: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: colors.ink[100],
-    borderRadius: 8,
-    padding: 14,
-    alignItems: "center",
-    marginTop: 16,
-    minHeight: 44,
-  },
-  secondaryText: {
-    color: colors.brand[900],
-    fontWeight: "700",
-    fontSize: 16,
-    fontFamily,
-  },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: colors.ink[100],
-  },
-  cardDay: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    color: colors.primary.onFixedVariant,
-    fontFamily,
-  },
-  cardTitle: { fontSize: 17, fontWeight: "700", marginTop: 2, fontFamily },
-  cardSub: { fontSize: 14, color: colors.ink[500], marginTop: 2, fontFamily },
-  rationale: {
-    fontSize: 13,
-    color: colors.ink[500],
-    marginTop: 12,
-    fontFamily,
-  },
-  homeTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    marginBottom: 8,
-  },
-  scoreCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    borderWidth: 6,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  scoreNum: { fontSize: 26, fontWeight: "800", color: colors.ink[900] },
-  streakFlame: { fontSize: 18, fontWeight: "700" },
-  cardActive: { borderColor: colors.brand[500], borderWidth: 2 },
-  btnRow: { flexDirection: "row", gap: 10, marginTop: 16 },
-  pendingBanner: {
-    backgroundColor: colors.accent[100],
-    color: colors.accent[600],
-    fontWeight: "700",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-    overflow: "hidden",
-  },
-  doneMsg: { fontSize: 14, fontWeight: "700", marginTop: 12 },
-  bookmark: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: colors.brand[700],
-    marginTop: 8,
-  },
-  barRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
-  },
-  barLabel: { fontSize: 12, color: colors.ink[500], width: 44 },
-  barTrack: {
-    flex: 1,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: colors.surface.container,
-    overflow: "hidden",
-  },
-  barFill: { height: 8, backgroundColor: colors.brand[500] },
-  barValue: {
-    fontSize: 13,
-    fontWeight: "700",
-    width: 28,
-    textAlign: "right",
-    fontFamily,
-  },
-  goalRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: colors.ink[100],
-  },
-  checkbox: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 2,
-    borderColor: colors.brand[500],
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxDone: { backgroundColor: colors.brand[500] },
-  checkboxText: { color: "#fff", fontWeight: "700" },
-  goalTitle: { flex: 1, fontSize: 15, fontWeight: "600" },
-  goalDone: { textDecorationLine: "line-through", color: colors.ink[500] },
-  goalDelete: { fontSize: 16, color: colors.danger, padding: 4 },
-  shell: { flex: 1, backgroundColor: colors.surface.base },
-  scroller: { flex: 1 },
-  centerWrap: { alignItems: "center", paddingVertical: 60 },
-  splashWrap: {
-    alignItems: "center",
-    paddingVertical: 60,
-    backgroundColor: colors.brand[900],
-    borderRadius: 24,
-    paddingHorizontal: 24,
-  },
-  splashTitle: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "#fff",
-    marginTop: 16,
-    fontFamily,
-  },
-  splashTag: {
-    fontSize: 15,
-    color: colors.brand[100],
-    marginTop: 4,
-    fontFamily,
-  },
-  splashLoader: {
-    height: 4,
-    width: 160,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    marginTop: 24,
-    overflow: "hidden",
-  },
-  splashLoaderFill: {
-    height: "100%",
-    width: "60%",
-    backgroundColor: colors.brand[100],
-    borderRadius: 999,
-  },
-  splashLogo: { fontSize: 64, fontWeight: "800", color: colors.brand[700] },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-    backgroundColor: "rgba(249, 249, 255, 0.9)",
-    paddingVertical: 8,
-  },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surface.container,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerIcon: { fontSize: 18 },
-  headerTitle: { fontSize: 18, fontWeight: "800", fontFamily },
-  tabBar: {
-    flexDirection: "row",
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: colors.ink[100],
-    paddingTop: 6,
-    paddingBottom: 16,
-    minHeight: 64,
-  },
-  tab: { flex: 1, alignItems: "center", minHeight: 44 },
-  tabIcon: { fontSize: 20 },
-  tabLabel: { fontSize: 11, color: colors.ink[500], fontFamily },
-  tabActive: { color: colors.brand[500], fontWeight: "700" },
-  drawerOverlay: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-  },
-  drawerScrim: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
-  drawer: { width: 250, backgroundColor: "#fff", padding: 20 },
-  drawerTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 12,
-    fontFamily,
-  },
-  drawerItem: { paddingVertical: 12, minHeight: 44 },
-  drawerText: { fontSize: 16, fontFamily },
-  moodRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
-  mood: {
-    flex: 1,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.ink[100],
-    borderRadius: 8,
-    paddingVertical: 8,
-    minHeight: 44,
-  },
-  moodSelected: {
-    borderColor: colors.brand[500],
-    backgroundColor: colors.brand[50],
-  },
-  moodEmoji: { fontSize: 24 },
-  moodLabel: { fontSize: 11, color: colors.ink[700], fontFamily },
-  checklistRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 8,
-  },
-  checkDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.brand[500],
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkDone: { backgroundColor: colors.brand[500] },
-  checkText: { color: "#fff", fontWeight: "700" },
-  checklistText: { fontSize: 15, flex: 1 },
-});

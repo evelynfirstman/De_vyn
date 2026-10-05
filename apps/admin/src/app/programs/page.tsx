@@ -36,8 +36,8 @@ export default function ProgramsPage() {
   const [error, setError] = useState<string | null>(null);
 
   async function refresh() {
-    const data = await api<{ data: Program[] }>("/v1/programs?pageSize=100");
-    setRows(data.data);
+    const items = await api<Program[]>("/v1/programs?pageSize=100");
+    setRows(items ?? []);
   }
 
   useEffect(() => {

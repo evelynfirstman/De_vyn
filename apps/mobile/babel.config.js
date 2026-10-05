@@ -9,7 +9,10 @@ const mobileRoot = posix(__dirname);
 const repoRoot = posix(__dirname, "..", "..");
 
 module.exports = {
-  presets: ["babel-preset-expo"],
+  presets: [
+    ["babel-preset-expo", { jsxImportSource: "nativewind" }],
+    "nativewind/babel",
+  ],
   plugins: [
     [
       "module-resolver",

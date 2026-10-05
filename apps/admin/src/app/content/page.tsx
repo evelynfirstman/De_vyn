@@ -31,8 +31,8 @@ export default function ContentPage() {
   const [error, setError] = useState<string | null>(null);
 
   async function refresh(t: Tab) {
-    const data = await api<{ data: Item[] }>(`/v1/${t}?pageSize=100`);
-    setRows(data.data);
+    const items = await api<Item[]>(`/v1/${t}?pageSize=100`);
+    setRows(items ?? []);
   }
 
   useEffect(() => {
