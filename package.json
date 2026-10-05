@@ -15,7 +15,9 @@
     "typecheck": "npm run typecheck --workspace services/api",
     "lint": "eslint .",
     "format": "prettier --check .",
-    "format:write": "prettier --write ."
+    "format:write": "prettier --write .",
+    "deploy:admin": "netlify deploy --build --prod",
+    "deploy:admin:preview": "netlify deploy --build"
   },
   "devDependencies": {
     "eslint": "^9.12.0",
