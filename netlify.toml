@@ -1,0 +1,17 @@
+# Netlify deploy for the Vyn Therapy admin web app (apps/admin, Next.js 14).
+# The API (services/api, Express + Postgres/Redis) CANNOT run on Netlify —
+# host it on Render/Fly/Railway with managed Postgres, then set
+# NEXT_PUBLIC_API_URL in the Netlify site settings to its public URL
+# (it is baked in at build time).
+[build]
+  base = "."
+  command = "npm run build --workspace apps/admin"
+  publish = "apps/admin/.next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # Set in Netlify UI → Site settings → Environment variables:
+  # NEXT_PUBLIC_API_URL = "https://<your-api-host>"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
