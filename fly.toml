@@ -1,0 +1,53 @@
+# Fly.io deploy for the Vyn Therapy API (free-allowance sized).
+# One-time setup (needs a Fly account — card verification, not charged
+# inside free allowances):
+#   fly auth signup
+#   fly postgres create --name vyn-db --region <closest> --vm-size shared-cpu-1x --volume-size 1 --initial-cluster-size 1
+#   fly redis create --name vyn-redis --region <closest>   # or self-host redis on Fly
+#   fly secrets set DATABASE_URL=<pg-conn> REDIS_URL=<redis-conn> \
+#     BETTER_AUTH_SECRET=$(openssl rand -base64 32) BETTER_AUTH_URL=https://vyn-api.fly.dev \
+#     CORS_ORIGINS=https://vyn-therapy-admin.netlify.app \
+#     FLUTTERWAVE_PUBLIC_KEY=... FLUTTERWAVE_SECRET_KEY=... FLUTTERWAVE_ENCRYPTION_KEY=... \
+#     FLUTTERWAVE_LIVE=true FLUTTERWAVE_REDIRECT_URL=https://vyn-api.fly.dev/v1/shop/payments/return \
+#     GROQ_API_KEY=... S3_ENDPOINT=... S3_ACCESS_KEY=... S3_SECRET_KEY=...
+#   fly deploy
+# NOTE: fly.toml `app` name must be globally unique; `fly launch` will
+# offer an alternative if vyn-api is taken.
+app = "vyn-api"
+primary_region = "jnb"
+
+[build]
+  dockerfile = "services/api/Dockerfile"
+
+[processes]
+  # Image has no prebuilt dist; compile once at boot, then run node.
+  app = "npm run build --workspace services/api && npm start --workspace services/api"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    protocol = "http"
+    timeout = "5s"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256

@@ -21,6 +21,7 @@ const schema = z.object({
   GROQ_MODEL: z.string().default("openai/gpt-oss-20b"),
   BETTER_AUTH_SECRET: z.string().default("dev-secret-change-me"),
   BETTER_AUTH_URL: z.string().default("http://localhost:4000"),
+  CORS_ORIGINS: z.string().default("http://localhost:3000,http://localhost:8081"),
   QR_SECRET: z.string().default("dev-qr-secret"),
   WOO_URL: z.string().default(""),
   WOO_CK: z.string().default(""),

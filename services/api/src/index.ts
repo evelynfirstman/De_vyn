@@ -34,7 +34,15 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://localhost:8081"],
+    origin: [
+      ...env.CORS_ORIGINS.split(",")
+        .map((o) => o.trim())
+        .filter(Boolean),
+      "vyntherapy://",
+      ...(env.NODE_ENV === "development"
+        ? ["exp://", "http://localhost:8081"]
+        : []),
+    ],
     credentials: true,
   }),
 );

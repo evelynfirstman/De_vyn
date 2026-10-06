@@ -13,8 +13,9 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   trustedOrigins: [
-    "http://localhost:3000",
-    "http://localhost:8081",
+    ...env.CORS_ORIGINS.split(",")
+      .map((o) => o.trim())
+      .filter(Boolean),
     "vyntherapy://",
     ...(env.NODE_ENV === "development"
       ? ["exp://", "exp://**", "exp://192.168.*.*:*/**"]
