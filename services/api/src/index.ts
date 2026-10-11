@@ -12,6 +12,7 @@ import { sessionsRouter } from "./routes/sessions";
 import { adminProgramsRouter } from "./routes/adminPrograms";
 import { learnRouter } from "./routes/learn";
 import { adminContentRouter } from "./routes/adminContent";
+import { adminMediaRouter } from "./routes/adminMedia";
 import { shopRouter } from "./routes/shop";
 import { goalsRouter } from "./routes/goals";
 import { notificationsRouter } from "./routes/notifications";
@@ -29,6 +30,7 @@ import { tipsRouter } from "./routes/tips";
 import { coachRouter } from "./routes/coach";
 import { authLinkRouter } from "./routes/authLink";
 import { authHandler, requireAdmin } from "./auth-guard";
+import { startFulfillmentWorker } from "./fulfillmentWorker";
 
 const app = express();
 
@@ -65,6 +67,7 @@ app.use("/v1", sessionsRouter);
 app.use("/v1", adminProgramsRouter);
 app.use("/v1", learnRouter);
 app.use("/v1", adminContentRouter);
+app.use("/v1", adminMediaRouter);
 app.use("/v1", shopRouter);
 app.use("/v1", goalsRouter);
 app.use("/v1", notificationsRouter);
@@ -89,6 +92,7 @@ async function main(): Promise<void> {
   const server = app.listen(env.PORT, () => {
     logger.info(`api listening on :${env.PORT}`);
   });
+  startFulfillmentWorker();
 
   function shutdown(signal: string): void {
     logger.info(`${signal} received, closing`);

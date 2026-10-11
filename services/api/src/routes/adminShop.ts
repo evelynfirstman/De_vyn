@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db";
 import { env } from "../env";
+import { retryFulfillment } from "../fulfillment";
 
 export const adminShopRouter = Router();
 
@@ -141,7 +142,10 @@ adminShopRouter.get("/admin/orders", async (req, res, next) => {
               o.amount_minor AS "amountMinor", o.currency,
               o.created_at AS "createdAt",
               p.status AS "paymentStatus", p.tx_ref AS "txRef",
-              f.status AS "fulfillmentStatus", f.bridge_ref AS "bridgeRef"
+              f.status AS "fulfillmentStatus", f.bridge_ref AS "bridgeRef",
+              f.tracking_number AS "trackingNumber",
+              f.tracking_url AS "trackingUrl", f.carrier,
+              f.woo_status AS "wooStatus", f.last_error AS "fulfillmentError"
          FROM orders o
          JOIN users u ON u.id = o.user_id
          LEFT JOIN payments p ON p.order_id = o.id
@@ -165,7 +169,11 @@ adminShopRouter.get("/admin/orders/:id", async (req, res, next) => {
                 o.created_at AS "createdAt",
                 p.status AS "paymentStatus", p.tx_ref AS "txRef",
                 f.status AS "fulfillmentStatus", f.bridge_ref AS "bridgeRef",
-                f.last_error AS "fulfillmentError"
+                f.last_error AS "fulfillmentError",
+                f.tracking_number AS "trackingNumber",
+                f.tracking_url AS "trackingUrl", f.carrier,
+                f.woo_status AS "wooStatus",
+                f.last_polled_at AS "lastPolledAt"
            FROM orders o
            JOIN users u ON u.id = o.user_id
            LEFT JOIN payments p ON p.order_id = o.id
@@ -240,3 +248,45 @@ adminShopRouter.post("/admin/orders/:id/refund", async (req, res, next) => {
     next(err);
   }
 });
+
+/**
+ * Re-dispatch a stuck/failed fulfillment to the WooCommerce bridge.
+ * Only paid orders are eligible — pushing an unpaid order would ship
+ * goods nobody paid for.
+ */
+adminShopRouter.post(
+  "/admin/orders/:id/fulfillment/retry",
+  async (req, res, next) => {
+    try {
+      const id = z.coerce.number().int().positive().parse(req.params.id);
+      const found = await pool.query(
+        `SELECT o.id, p.status AS "paymentStatus"
+           FROM orders o LEFT JOIN payments p ON p.order_id = o.id
+          WHERE o.id = $1`,
+        [id],
+      );
+      if (found.rows.length === 0) {
+        res.status(404).json({
+          error: { code: "ORDER_NOT_FOUND", message: "No such order" },
+        });
+        return;
+      }
+      if (
+        (found.rows[0] as { paymentStatus: string | null }).paymentStatus !==
+        "paid"
+      ) {
+        res.status(409).json({
+          error: {
+            code: "ORDER_NOT_PAID",
+            message: "Only paid orders can be dispatched",
+          },
+        });
+        return;
+      }
+      const result = await retryFulfillment(id);
+      res.json({ data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+);

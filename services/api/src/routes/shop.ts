@@ -475,13 +475,16 @@ shopRouter.get("/shop/orders", async (req, res, next) => {
               COALESCE(json_agg(json_build_object('sku', i.sku, 'title', i.title, 'qty', i.qty, 'unitMinor', i.unit_minor))
                 FILTER (WHERE i.id IS NOT NULL), '[]') AS items,
               p.status AS "paymentStatus", p.tx_ref AS "txRef",
-              f.status AS "fulfillmentStatus", f.bridge_ref AS "bridgeRef"
+              f.status AS "fulfillmentStatus", f.bridge_ref AS "bridgeRef",
+              f.tracking_number AS "trackingNumber",
+              f.tracking_url AS "trackingUrl", f.carrier
          FROM orders o
          LEFT JOIN order_items i ON i.order_id = o.id
          LEFT JOIN payments p ON p.order_id = o.id
          LEFT JOIN fulfillment_orders f ON f.order_id = o.id
         WHERE o.user_id = $1
-        GROUP BY o.id, p.status, p.tx_ref, f.status, f.bridge_ref
+        GROUP BY o.id, p.status, p.tx_ref, f.status, f.bridge_ref,
+                 f.tracking_number, f.tracking_url, f.carrier
         ORDER BY o.created_at DESC`,
       [userId],
     );

@@ -13,6 +13,12 @@ const schema = z.object({
   S3_SECRET_KEY: z.string().default("test"),
   S3_MEDIA_BUCKET: z.string().default("vyn-media"),
   S3_PRODUCTS_BUCKET: z.string().default("vyn-products"),
+  // Cloudflare R2 uses region "auto". S3Mock ignores it.
+  S3_REGION: z.string().default("auto"),
+  // Public base for reads (R2 public bucket URL or CDN). Falls back to the
+  // endpoint + bucket when unset (fine for S3Mock/local).
+  S3_PUBLIC_BASE_URL: z.string().default(""),
+  S3_FORCE_PATH_STYLE: z.string().default("false"),
   FLUTTERWAVE_PUBLIC_KEY: z.string().default(""),
   FLUTTERWAVE_SECRET_KEY: z.string().default(""),
   FLUTTERWAVE_LIVE: z.string().default("false"),
@@ -26,6 +32,14 @@ const schema = z.object({
   WOO_URL: z.string().default(""),
   WOO_CK: z.string().default(""),
   WOO_CS: z.string().default(""),
+  // "expand" ships bundle members (no kit product needed in TeemDrop);
+  // "as-is" mirrors the catalog SKUs 1:1.
+  WOO_BUNDLE_MODE: z.enum(["expand", "as-is"]).default("expand"),
+  WOO_TIMEOUT_MS: z.coerce.number().default(10000),
+  FULFILLMENT_PROVIDER: z.string().default("woo-bridge"),
+  // Background worker: retry failed pushes + pull tracking back from Woo.
+  FULFILLMENT_WORKER: z.string().default("true"),
+  FULFILLMENT_POLL_MS: z.coerce.number().default(60000),
 });
 
 export type Env = z.infer<typeof schema>;

@@ -1,16 +1,30 @@
-# Fly.io deploy for the Vyn Therapy API (free-allowance sized).
-# One-time setup (needs a Fly account — card verification, not charged
-# inside free allowances):
+# Fly.io deploy for the Vyn Therapy API (Machines only — DB/Redis are external).
+#
+# Fly "free allowance" is gone; new orgs get a short trial only. To keep this
+# cheap we do NOT run Postgres/Redis on Fly:
+#   - Postgres: Neon free tier  -> set DATABASE_URL
+#   - Redis:    Upstash free    -> set REDIS_URL
+#   - Storage:  Cloudflare R2 (S3-compatible) -> S3_* (region "auto")
+# (Fly Managed Postgres exists but starts at $38/mo; see fly.io/docs/mpg.)
+#
+# One-time setup (needs a Fly account with card verification):
 #   fly auth signup
-#   fly postgres create --name vyn-db --region <closest> --vm-size shared-cpu-1x --volume-size 1 --initial-cluster-size 1
-#   fly redis create --name vyn-redis --region <closest>   # or self-host redis on Fly
-#   fly secrets set DATABASE_URL=<pg-conn> REDIS_URL=<redis-conn> \
-#     BETTER_AUTH_SECRET=$(openssl rand -base64 32) BETTER_AUTH_URL=https://vyn-api.fly.dev \
-#     CORS_ORIGINS=https://vyn-therapy-admin.netlify.app \
-#     FLUTTERWAVE_PUBLIC_KEY=... FLUTTERWAVE_SECRET_KEY=... FLUTTERWAVE_ENCRYPTION_KEY=... \
-#     FLUTTERWAVE_LIVE=true FLUTTERWAVE_REDIRECT_URL=https://vyn-api.fly.dev/v1/shop/payments/return \
-#     GROQ_API_KEY=... S3_ENDPOINT=... S3_ACCESS_KEY=... S3_SECRET_KEY=...
+#   fly apps create vyn-api            # name must be globally unique
+#   fly secrets set -a vyn-api \
+#     DATABASE_URL="postgres://...neon.tech/vyn?sslmode=require" \
+#     REDIS_URL="rediss://...upstash.io:6379" \
+#     BETTER_AUTH_SECRET="$(node -p \"require('crypto').randomBytes(32).toString('base64')\")" \
+#     BETTER_AUTH_URL="https://vyn-api.fly.dev" \
+#     CORS_ORIGINS="https://vyn-therapy-admin.netlify.app,https://<pwa-origin>" \
+#     S3_ENDPOINT="https://<accountid>.r2.cloudflarestorage.com" S3_REGION="auto" \
+#     S3_ACCESS_KEY="..." S3_SECRET_KEY="..." \
+#     S3_MEDIA_BUCKET="vyn-media" S3_PRODUCTS_BUCKET="vyn-products" \
+#     S3_PUBLIC_BASE_URL="https://<your-r2-public-domain>" \
+#     FLUTTERWAVE_PUBLIC_KEY="..." FLUTTERWAVE_SECRET_KEY="..." \
+#     FLUTTERWAVE_LIVE="false" FLUTTERWAVE_REDIRECT_URL="https://vyn-api.fly.dev/v1/shop/payments/return" \
+#     GROQ_API_KEY="..." QR_SECRET="..."
 #   fly deploy
+#
 # NOTE: fly.toml `app` name must be globally unique; `fly launch` will
 # offer an alternative if vyn-api is taken.
 app = "vyn-api"
@@ -20,8 +34,8 @@ primary_region = "jnb"
   dockerfile = "services/api/Dockerfile"
 
 [processes]
-  # Image has no prebuilt dist; compile once at boot, then run node.
-  app = "npm run build --workspace services/api && npm start --workspace services/api"
+  # Dockerfile compiles the API at image build; just run the output.
+  app = "node services/api/dist/index.js"
 
 [env]
   NODE_ENV = "production"

@@ -7,15 +7,33 @@
     "orientation": "portrait",
     "newArchEnabled": true,
     "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "backgroundColor": "#0D4E45",
     "ios": {
       "bundleIdentifier": "com.vyntherapy.app"
     },
     "android": {
-      "package": "com.vyntherapy.app"
+      "package": "com.vyntherapy.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#006857"
+      },
+      "versionCode": 3
     },
-    "plugins": ["expo-web-browser", "expo-font", "expo-secure-store"],
+    "plugins": [
+      "expo-web-browser",
+      "expo-font",
+      "expo-secure-store"
+    ],
     "web": {
-      "bundler": "metro"
-    }
+      "bundler": "metro",
+      "favicon": "./public/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "91da9ed5-9afb-439a-b0c6-907a32f0e054"
+      }
+    },
+    "owner": "evelynfirstman"
   }
 }

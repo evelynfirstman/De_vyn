@@ -1,0 +1,97 @@
+# Render blueprint for the Vyn Therapy API (Docker web service).
+#
+# DB/Redis/storage are external — nothing runs on Render:
+#   - Postgres: Neon free tier           -> DATABASE_URL
+#   - Redis:    Upstash free            -> REDIS_URL
+#   - Storage:  Cloudflare R2 (S3 API)  -> S3_* (region "auto")
+#
+# One-time setup:
+#   1. Dashboard -> New + -> Blueprint -> connect this repo (Render reads render.yaml).
+#   2. Fill the `sync: false` envVars with real values (they are secrets; not stored in git).
+#   3. Deploy. First boot runs migrations (services/api/src/migrate.ts).
+#
+# Notes:
+#   - Render injects PORT; the API already reads it (services/api/src/index.ts:92).
+#   - Free plan spins down after ~15 min idle (cold start 30-60s). Postgres/Redis/R2 are external,
+#     so no data is lost; the in-process fulfillment worker pauses while asleep.
+#   - No background-worker/cron service needed: the retry/tracking sweep runs in-process.
+
+services:
+  - type: web
+    name: vyn-api
+    runtime: docker
+    plan: free
+    region: frankfurt # nearest to ZA; change to oregon/ohio/singapore/sydney if needed
+    dockerfilePath: ./services/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # --- data stores (Neon / Upstash) ---
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+      # --- auth ---
+      - key: BETTER_AUTH_SECRET
+        sync: false
+      - key: BETTER_AUTH_URL # https://vyn-api.onrender.com (or custom domain)
+        sync: false
+      - key: CORS_ORIGINS # comma-separated: admin + PWA origins
+        sync: false
+
+      # --- object storage (Cloudflare R2) ---
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_REGION
+        value: auto
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+      - key: S3_MEDIA_BUCKET
+        value: vyn-media
+      - key: S3_PRODUCTS_BUCKET
+        value: vyn-products
+      - key: S3_PUBLIC_BASE_URL
+        sync: false
+      - key: S3_FORCE_PATH_STYLE
+        value: "false"
+
+      # --- payments (Flutterwave) ---
+      - key: FLUTTERWAVE_PUBLIC_KEY
+        sync: false
+      - key: FLUTTERWAVE_SECRET_KEY
+        sync: false
+      - key: FLUTTERWAVE_LIVE
+        value: "false"
+      - key: FLUTTERWAVE_REDIRECT_URL # https://vyn-api.onrender.com/v1/shop/payments/return
+        sync: false
+
+      # --- AI coach (Groq) + QR signing ---
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-20b
+      - key: QR_SECRET
+        sync: false
+
+      # --- fulfillment (WooCommerce bridge -> TeemDrop) ---
+      - key: FULFILLMENT_PROVIDER
+        value: woo-bridge
+      - key: FULFILLMENT_WORKER
+        value: "true"
+      - key: FULFILLMENT_POLL_MS
+        value: "60000"
+      - key: WOO_URL
+        sync: false
+      - key: WOO_CK
+        sync: false
+      - key: WOO_CS
+        sync: false
+      - key: WOO_BUNDLE_MODE
+        value: expand

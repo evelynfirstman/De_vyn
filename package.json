@@ -17,7 +17,11 @@
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "deploy:admin": "netlify deploy --build --prod",
-    "deploy:admin:preview": "netlify deploy --build"
+    "deploy:admin:preview": "netlify deploy --build",
+    "build:pwa": "npm run build:web --workspace apps/mobile",
+    "deploy:pwa": "netlify deploy --dir apps/mobile/dist --prod",
+    "deploy:pwa:preview": "netlify deploy --dir apps/mobile/dist",
+    "build:apk": "npm run build:apk --workspace apps/mobile"
   },
   "devDependencies": {
     "eslint": "^9.12.0",
@@ -27,7 +31,7 @@
   },
   "overrides": {
     "react-native": "0.81.5",
-    "react-native-reanimated": "4.1.7",
-    "react-native-worklets": "0.8.3"
+    "react-native-reanimated": "4.1.1",
+    "react-native-worklets": "0.5.1"
   }
 }
