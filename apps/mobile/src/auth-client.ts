@@ -1,6 +1,6 @@
 import { createAuthClient } from "better-auth/react";
 import { expoClient } from "@better-auth/expo/client";
-import * as SecureStore from "expo-secure-store";
+import { authStorage } from "./auth-storage";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -14,7 +14,7 @@ export const authClient = createAuthClient({
     expoClient({
       scheme: "vyntherapy",
       storagePrefix: "vyn",
-      storage: SecureStore,
+      storage: authStorage,
     }),
   ],
 });
