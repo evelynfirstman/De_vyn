@@ -23,5 +23,21 @@ export const auth = betterAuth({
   ],
   database: new Pool({ connectionString: env.DATABASE_URL }),
   emailAndPassword: { enabled: true },
+  advanced: {
+    // The admin app and PWA are served from a different site than the API
+    // (e.g. *.netlify.app vs *.onrender.com), so the session cookie must be
+    // SameSite=None; Secure for browsers to send it cross-site. Left at the
+    // default (Lax) in development so local http:// cookies still work.
+    ...(env.NODE_ENV === "production"
+      ? {
+          defaultCookieAttributes: {
+            sameSite: "none" as const,
+            secure: true,
+            httpOnly: true,
+            partitioned: true,
+          },
+        }
+      : {}),
+  },
   plugins: [expo(), admin()],
 });
